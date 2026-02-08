@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>523</string>
+	<key>AMApplicationVersion</key>
+	<string>2.10</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>1.0.2</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run AppleScript.action</string>
+				<key>ActionName</key>
+				<string>Run AppleScript</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>source</key>
+					<string>on run {input, parameters}
+	set taskTitle to "OmniFocus GTD Quick Capture"
+	set taskPrompt to "Enter task (!1 to flag, due:date, @tag, +project):"
+
+	display dialog taskPrompt default answer "" with title taskTitle
+	set taskText to text returned of result
+
+	if taskText is "" then
+		display notification "No text entered." with title taskTitle
+		return
+	end if
+
+	-- Parse flag (!1 = flagged)
+	set isFlagged to false
+	if taskText contains "!1" then
+		set isFlagged to true
+		set taskText to my replaceText(taskText, "!1", "")
+	end if
+	-- !2 and !3 don't map to OmniFocus (no priority levels), just strip them
+	if taskText contains "!2" then set taskText to my replaceText(taskText, "!2", "")
+	if taskText contains "!3" then set taskText to my replaceText(taskText, "!3", "")
+
+	-- Parse due date
+	set dueDate to missing value
+	set today to current date
+	if taskText contains "due:today" then
+		set dueDate to today
+		set taskText to my replaceText(taskText, "due:today", "")
+	else if taskText contains "due:tomorrow" then
+		set dueDate to today + (1 * days)
+		set taskText to my replaceText(taskText, "due:tomorrow", "")
+	else
+		try
+			set AppleScript's text item delimiters to "due:"
+			set parts to text items of taskText
+			if (count of parts) &gt; 1 then
+				set dateStr to word 1 of item 2 of parts
+				if dateStr contains "-" then
+					set AppleScript's text item delimiters to "-"
+					set dateParts to text items of dateStr
+					if (count of dateParts) = 3 then
+						set dueDate to current date
+						set year of dueDate to (item 1 of dateParts as integer)
+						set month of dueDate to (item 2 of dateParts as integer)
+						set day of dueDate to (item 3 of dateParts as integer)
+						set hours of dueDate to 0
+						set minutes of dueDate to 0
+						set seconds of dueDate to 0
+						set taskText to my replaceText(taskText, "due:" &amp; dateStr, "")
+					end if
+				end if
+			end if
+			set AppleScript's text item delimiters to ""
+		end try
+	end if
+
+	-- Parse tag (@tag)
+	set tagValue to ""
+	set words to every word of taskText
+	repeat with w in words
+		if (w as text) starts with "@" then
+			set tagValue to text 2 thru -1 of (w as text)
+			set taskText to my replaceText(taskText, w as text, "")
+			exit repeat
+		end if
+	end repeat
+
+	-- Parse project (+project)
+	set projectValue to ""
+	set words to every word of taskText
+	repeat with w in words
+		if (w as text) starts with "+" then
+			set projectValue to text 2 thru -1 of (w as text)
+			set taskText to my replaceText(taskText, w as text, "")
+			exit repeat
+		end if
+	end repeat
+
+	set taskText to my trimText(taskText)
+
+	-- Check if OmniFocus is installed
+	set ofInstalled to false
+	try
+		tell application "System Events"
+			set ofInstalled to exists application file id "com.omnigroup.OmniFocus3" or exists application file id "com.omnigroup.OmniFocus4"
+		end tell
+	end try
+
+	if ofInstalled then
+		-- Use AppleScript
+		tell application "OmniFocus"
+			tell default document
+				set taskProps to {name:taskText, flagged:isFlagged}
+				set newTask to make new inbox task with properties taskProps
+				if dueDate is not missing value then
+					set due date of newTask to dueDate
+				end if
+			end tell
+		end tell
+
+		set notifyMsg to "Task added to OmniFocus: " &amp; taskText
+		if isFlagged then set notifyMsg to notifyMsg &amp; " (flagged)"
+		if dueDate is not missing value then set notifyMsg to notifyMsg &amp; " (due date set)"
+		display notification notifyMsg with title taskTitle
+	else
+		-- Fallback: URL scheme
+		set ofURL to "omnifocus:///add?name=" &amp; my encodeText(taskText)
+		if isFlagged then set ofURL to ofURL &amp; "&amp;flag=true"
+		open location ofURL
+		display notification "Task sent to OmniFocus: " &amp; taskText with title taskTitle
+	end if
+
+	return input
+end run
+
+on replaceText(theText, searchStr, replaceStr)
+	set AppleScript's text item delimiters to searchStr
+	set theItems to text items of theText
+	set AppleScript's text item delimiters to replaceStr
+	set theText to theItems as text
+	set AppleScript's text item delimiters to ""
+	return theText
+end replaceText
+
+on trimText(theText)
+	repeat while theText starts with " "
+		set theText to text 2 thru -1 of theText
+	end repeat
+	repeat while theText ends with " "
+		set theText to text 1 thru -2 of theText
+	end repeat
+	return theText
+end trimText
+
+on encodeText(theText)
+	set theTextEnc to ""
+	repeat with eachChar in characters of theText
+		set useChar to eachChar
+		set eachCharNum to ASCII number of eachChar
+		if eachCharNum = 32 then
+			set useChar to "%20"
+		else if (eachCharNum &gt;= 48 and eachCharNum &lt;= 57) or (eachCharNum &gt;= 65 and eachCharNum &lt;= 90) or (eachCharNum &gt;= 97 and eachCharNum &lt;= 122) then
+			set useChar to eachChar
+		else
+			set useChar to "%" &amp; my toHex(eachCharNum)
+		end if
+		set theTextEnc to theTextEnc &amp; useChar
+	end repeat
+	return theTextEnc
+end encodeText
+
+on toHex(theNum)
+	set hexChars to "0123456789ABCDEF"
+	set theHex to ""
+	repeat with i from 0 to 1
+		set theInt to theNum div (16 ^ (1 - i)) mod 16 + 1
+		set theHex to theHex &amp; character theInt of hexChars
+	end repeat
+	return theHex
+end toHex</string>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.RunScript</string>
+				<key>CFBundleVersion</key>
+				<string>1.0.2</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunScriptAction</string>
+				<key>InputUUID</key>
+				<string>4B8E8F58-7E5A-4C5E-8F5E-5E5E5E5E5E5E</string>
+				<key>Keywords</key>
+				<array>
+					<string>Run</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>5E5E5E5E-5E5E-5E5E-5E5E-5E5E5E5E5E5E</string>
+				<key>UUID</key>
+				<string>1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default</key>
+						<string>on run {input, parameters}
+
+	(* Your script goes here *)
+
+	return input
+end run</string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>isViewVisible</key>
+				<integer>1</integer>
+				<key>location</key>
+				<string>449.500000:316.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/Base.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict/>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.application</string>
+	</dict>
+</dict>
+</plist>

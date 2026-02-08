@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>523</string>
+	<key>AMApplicationVersion</key>
+	<string>2.10</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>1.0.2</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run AppleScript.action</string>
+				<key>ActionName</key>
+				<string>Run AppleScript</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>source</key>
+					<string>on run {input, parameters}
+	set eventTitle to "GTD Event Quick Capture"
+	set eventPrompt to "Enter event (e.g., 'Meeting tomorrow 2pm 1h @Conference Room'):"
+
+	display dialog eventPrompt default answer "" with title eventTitle
+	set eventText to text returned of result
+
+	if eventText is "" then
+		display notification "No event entered." with title eventTitle
+		return
+	end if
+
+	-- Parse location (@location)
+	set eventLocation to ""
+	if eventText contains "@" then
+		set atPos to offset of "@" in eventText
+		set eventLocation to text (atPos + 1) thru -1 of eventText
+		set eventText to text 1 thru (atPos - 1) of eventText
+		set eventLocation to my trimText(eventLocation)
+	end if
+
+	-- Parse duration (30m, 1h, 2h, etc.)
+	set eventDuration to 60 -- default 60 minutes
+	set words to every word of eventText
+	repeat with w in words
+		set wText to w as text
+		if wText ends with "m" then
+			try
+				set numPart to text 1 thru -2 of wText
+				set eventDuration to numPart as integer
+				set eventText to my replaceText(eventText, wText, "")
+			end try
+		else if wText ends with "h" then
+			try
+				set numPart to text 1 thru -2 of wText
+				set eventDuration to (numPart as integer) * 60
+				set eventText to my replaceText(eventText, wText, "")
+			end try
+		end if
+	end repeat
+
+	-- Parse time (look for patterns like "2pm", "14:00", "3:30pm")
+	set eventHour to 9
+	set eventMinute to 0
+	set foundTime to false
+	set words to every word of eventText
+	repeat with w in words
+		set wText to w as text
+		if wText ends with "pm" or wText ends with "am" then
+			try
+				set timeStr to text 1 thru -3 of wText
+				set isPM to wText ends with "pm"
+				if timeStr contains ":" then
+					set AppleScript's text item delimiters to ":"
+					set timeParts to text items of timeStr
+					set AppleScript's text item delimiters to ""
+					set eventHour to (item 1 of timeParts) as integer
+					set eventMinute to (item 2 of timeParts) as integer
+				else
+					set eventHour to timeStr as integer
+					set eventMinute to 0
+				end if
+				if isPM and eventHour &lt; 12 then set eventHour to eventHour + 12
+				if (not isPM) and eventHour = 12 then set eventHour to 0
+				set foundTime to true
+				set eventText to my replaceText(eventText, wText, "")
+			end try
+		end if
+	end repeat
+
+	-- Parse date
+	set eventDate to current date
+	if eventText contains "tomorrow" then
+		set eventDate to (current date) + (1 * days)
+		set eventText to my replaceText(eventText, "tomorrow", "")
+	else if eventText contains "today" then
+		set eventText to my replaceText(eventText, "today", "")
+	end if
+
+	-- Set time on date
+	set hours of eventDate to eventHour
+	set minutes of eventDate to eventMinute
+	set seconds of eventDate to 0
+
+	set eventText to my trimText(eventText)
+
+	-- Calculate end date
+	set endDate to eventDate + (eventDuration * 60)
+
+	-- Create calendar event
+	tell application "Calendar"
+		launch
+		set defaultCal to first calendar whose name is not ""
+		tell defaultCal
+			make new event with properties {summary:eventText, start date:eventDate, end date:endDate, location:eventLocation}
+		end tell
+	end tell
+
+	set notifyMsg to "Event created: " &amp; eventText
+	if eventLocation is not "" then set notifyMsg to notifyMsg &amp; " at " &amp; eventLocation
+	display notification notifyMsg with title eventTitle
+
+	return input
+end run
+
+on replaceText(theText, searchStr, replaceStr)
+	set AppleScript's text item delimiters to searchStr
+	set theItems to text items of theText
+	set AppleScript's text item delimiters to replaceStr
+	set theText to theItems as text
+	set AppleScript's text item delimiters to ""
+	return theText
+end replaceText
+
+on trimText(theText)
+	repeat while theText starts with " "
+		set theText to text 2 thru -1 of theText
+	end repeat
+	repeat while theText ends with " "
+		set theText to text 1 thru -2 of theText
+	end repeat
+	return theText
+end trimText</string>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.RunScript</string>
+				<key>CFBundleVersion</key>
+				<string>1.0.2</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunScriptAction</string>
+				<key>InputUUID</key>
+				<string>12345678-1234-1234-1234-123456789012</string>
+				<key>Keywords</key>
+				<array>
+					<string>Run</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>12345678-1234-1234-1234-123456789013</string>
+				<key>UUID</key>
+				<string>12345678-1234-1234-1234-123456789014</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default</key>
+						<string>on run {input, parameters}
+
+	(* Your script goes here *)
+
+	return input
+end run</string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>isViewVisible</key>
+				<integer>1</integer>
+				<key>location</key>
+				<string>309.500000:253.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/Base.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict/>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.workflow</string>
+	</dict>
+</dict>
+</plist>

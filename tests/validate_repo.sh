@@ -79,6 +79,8 @@ check_automator_workflow() {
 
 check_automator_workflow "apple" "GTD-QuickCapture.workflow"
 check_automator_workflow "apple" "GTD-ClipboardCapture.workflow"
+check_automator_workflow "apple" "GTD-BatchCapture.workflow"
+check_automator_workflow "apple" "GTD-WeeklyReview.workflow"
 check_automator_workflow "microsoft" "MS-GTD-QuickCapture.workflow"
 check_automator_workflow "google" "Google-GTD-QuickCapture.workflow"
 

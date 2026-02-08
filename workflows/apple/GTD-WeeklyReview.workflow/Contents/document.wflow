@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>521.1</string>
+	<key>AMApplicationVersion</key>
+	<string>2.10</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>1.0.2</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run AppleScript.action</string>
+				<key>ActionName</key>
+				<string>Run AppleScript</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>source</key>
+					<string>on run {input, parameters}
+	set reviewTitle to "GTD Weekly Review"
+
+	-- Step 1: Inbox count
+	set inboxCount to 0
+	tell application "Reminders"
+		launch
+		try
+			set inboxCount to count of (reminders in list "Inbox" whose completed is false)
+		end try
+	end tell
+
+	set step1 to "STEP 1: Process Inbox" &amp; return &amp; return
+	set step1 to step1 &amp; "You have " &amp; inboxCount &amp; " items in your Inbox." &amp; return
+	set step1 to step1 &amp; "Process each item: Do it, Delegate it, Defer it, or Delete it."
+	display dialog step1 with title reviewTitle buttons {"Skip", "Open Reminders", "Next"} default button "Next"
+	if button returned of result is "Open Reminders" then
+		tell application "Reminders" to activate
+		delay 2
+	end if
+
+	-- Step 2: Review active tasks
+	set activeCount to 0
+	set overdueCount to 0
+	tell application "Reminders"
+		set activeCount to count of (reminders whose completed is false)
+		try
+			set overdueCount to count of (reminders whose completed is false and due date &lt; (current date))
+		end try
+	end tell
+
+	set step2 to "STEP 2: Review Active Tasks" &amp; return &amp; return
+	set step2 to step2 &amp; "Active tasks: " &amp; activeCount &amp; return
+	set step2 to step2 &amp; "Overdue tasks: " &amp; overdueCount &amp; return &amp; return
+	set step2 to step2 &amp; "Review each project. Is it still relevant? What's the next action?"
+	display dialog step2 with title reviewTitle buttons {"Skip", "Next"} default button "Next"
+
+	-- Step 3: Check calendar
+	set step3 to "STEP 3: Review Calendar" &amp; return &amp; return
+	set step3 to step3 &amp; "Check your calendar for the next 7 days." &amp; return
+	set step3 to step3 &amp; "Are there meetings to prepare for? Deadlines approaching?"
+	display dialog step3 with title reviewTitle buttons {"Skip", "Open Calendar", "Next"} default button "Next"
+	if button returned of result is "Open Calendar" then
+		tell application "Calendar" to activate
+		delay 2
+	end if
+
+	-- Step 4: Review lists
+	set listSummary to ""
+	tell application "Reminders"
+		set allLists to every list
+		repeat with aList in allLists
+			set listName to name of aList
+			set listCount to count of (reminders in aList whose completed is false)
+			if listCount &gt; 0 then
+				set listSummary to listSummary &amp; "  " &amp; listName &amp; ": " &amp; listCount &amp; " tasks" &amp; return
+			end if
+		end repeat
+	end tell
+
+	set step4 to "STEP 4: Review All Lists" &amp; return &amp; return
+	set step4 to step4 &amp; listSummary &amp; return
+	set step4 to step4 &amp; "Are any tasks stuck? Can anything be delegated or deleted?"
+	display dialog step4 with title reviewTitle buttons {"Skip", "Next"} default button "Next"
+
+	-- Step 5: Capture new ideas
+	set step5 to "STEP 5: Brain Dump" &amp; return &amp; return
+	set step5 to step5 &amp; "Anything on your mind? New tasks, ideas, or projects?" &amp; return
+	set step5 to step5 &amp; "Enter them below (one per line):"
+	display dialog step5 default answer "" with title reviewTitle buttons {"Skip", "Add to Inbox"} default button "Add to Inbox"
+
+	if button returned of result is "Add to Inbox" then
+		set newTasks to text returned of result
+		if newTasks is not "" then
+			set AppleScript's text item delimiters to return
+			set taskLines to text items of newTasks
+			set AppleScript's text item delimiters to ""
+
+			set addedCount to 0
+			tell application "Reminders"
+				set inboxList to missing value
+				try
+					set inboxList to list "Inbox"
+				on error
+					set inboxList to first list
+				end try
+
+				repeat with taskLine in taskLines
+					set thisTask to taskLine as text
+					if thisTask is not "" then
+						tell inboxList
+							make new reminder with properties {name:thisTask}
+						end tell
+						set addedCount to addedCount + 1
+					end if
+				end repeat
+			end tell
+
+			if addedCount &gt; 0 then
+				display notification "Added " &amp; addedCount &amp; " new items to Inbox." with title reviewTitle
+			end if
+		end if
+	end if
+
+	-- Summary
+	set summary to "Weekly Review Complete!" &amp; return &amp; return
+	set summary to summary &amp; "Summary:" &amp; return
+	set summary to summary &amp; "  Inbox: " &amp; inboxCount &amp; " items" &amp; return
+	set summary to summary &amp; "  Active: " &amp; activeCount &amp; " tasks" &amp; return
+	set summary to summary &amp; "  Overdue: " &amp; overdueCount &amp; " tasks" &amp; return &amp; return
+	set summary to summary &amp; "Great job staying on top of your commitments!"
+	display dialog summary with title reviewTitle buttons {"Done"} default button "Done"
+
+	return input
+end run</string>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.RunScript</string>
+				<key>CFBundleVersion</key>
+				<string>1.0.2</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunScriptAction</string>
+				<key>InputUUID</key>
+				<string>B8CE46AA-3B3B-4BFE-B5B5-2AF9B9C94D9A</string>
+				<key>Keywords</key>
+				<array>
+					<string>Run</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>D6F0BADF-0ADE-4744-B6E0-D5BE6B891E45</string>
+				<key>UUID</key>
+				<string>9A85B814-0F63-4709-A3FB-3F7DADEA0BA2</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default value</key>
+						<string>on run {input, parameters}
+
+	(* Your script goes here *)
+
+	return input
+end run</string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>isViewVisible</key>
+				<integer>1</integer>
+				<key>location</key>
+				<string>529.000000:368.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/Base.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict/>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>applicationBundleIDsByPath</key>
+		<dict/>
+		<key>applicationPaths</key>
+		<array/>
+		<key>inputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>outputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>presentationMode</key>
+		<integer>11</integer>
+		<key>processesInput</key>
+		<false/>
+		<key>serviceInputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>serviceOutputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>serviceProcessesInput</key>
+		<false/>
+		<key>systemImageName</key>
+		<string>NSActionTemplate</string>
+		<key>useAutomaticInputType</key>
+		<false/>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.servicesMenu</string>
+	</dict>
+</dict>
+</plist>

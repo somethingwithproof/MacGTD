@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>523</string>
+	<key>AMApplicationVersion</key>
+	<string>2.10</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>1.0.2</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run AppleScript.action</string>
+				<key>ActionName</key>
+				<string>Run AppleScript</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>source</key>
+					<string>on run {input, parameters}
+	set taskTitle to "Things GTD Quick Capture"
+	set taskPrompt to "Enter task (!1/!2/!3 priority, due:date, @tag, +project):"
+
+	display dialog taskPrompt default answer "" with title taskTitle
+	set taskText to text returned of result
+
+	if taskText is "" then
+		display notification "No text entered." with title taskTitle
+		return
+	end if
+
+	-- Parse when/priority
+	set whenValue to ""
+	if taskText contains "!1" then
+		set whenValue to "today"
+		set taskText to my replaceText(taskText, "!1", "")
+	else if taskText contains "!2" then
+		set whenValue to "anytime"
+		set taskText to my replaceText(taskText, "!2", "")
+	else if taskText contains "!3" then
+		set whenValue to "someday"
+		set taskText to my replaceText(taskText, "!3", "")
+	end if
+
+	-- Parse due date (deadline in Things)
+	set deadlineValue to ""
+	if taskText contains "due:today" then
+		set deadlineValue to my todayString()
+		set taskText to my replaceText(taskText, "due:today", "")
+	else if taskText contains "due:tomorrow" then
+		set deadlineValue to my tomorrowString()
+		set taskText to my replaceText(taskText, "due:tomorrow", "")
+	else
+		try
+			set AppleScript's text item delimiters to "due:"
+			set parts to text items of taskText
+			if (count of parts) &gt; 1 then
+				set dateStr to word 1 of item 2 of parts
+				if dateStr contains "-" then
+					set deadlineValue to dateStr
+					set taskText to my replaceText(taskText, "due:" &amp; dateStr, "")
+				end if
+			end if
+			set AppleScript's text item delimiters to ""
+		end try
+	end if
+
+	-- Parse tag (@tag)
+	set tagValue to ""
+	set words to every word of taskText
+	repeat with w in words
+		if (w as text) starts with "@" then
+			set tagValue to text 2 thru -1 of (w as text)
+			set taskText to my replaceText(taskText, w as text, "")
+			exit repeat
+		end if
+	end repeat
+
+	-- Parse project (+project)
+	set projectValue to ""
+	set words to every word of taskText
+	repeat with w in words
+		if (w as text) starts with "+" then
+			set projectValue to text 2 thru -1 of (w as text)
+			set taskText to my replaceText(taskText, w as text, "")
+			exit repeat
+		end if
+	end repeat
+
+	set taskText to my trimText(taskText)
+
+	-- Build Things URL
+	set thingsURL to "things:///add?title=" &amp; my encodeText(taskText)
+	if whenValue is not "" then
+		set thingsURL to thingsURL &amp; "&amp;when=" &amp; whenValue
+	end if
+	if deadlineValue is not "" then
+		set thingsURL to thingsURL &amp; "&amp;deadline=" &amp; deadlineValue
+	end if
+	if tagValue is not "" then
+		set thingsURL to thingsURL &amp; "&amp;tags=" &amp; my encodeText(tagValue)
+	end if
+	if projectValue is not "" then
+		set thingsURL to thingsURL &amp; "&amp;list=" &amp; my encodeText(projectValue)
+	end if
+
+	-- Open URL
+	open location thingsURL
+
+	-- Notify
+	set notifyMsg to "Task added to Things: " &amp; taskText
+	display notification notifyMsg with title taskTitle
+
+	return input
+end run
+
+on todayString()
+	set today to current date
+	set y to year of today as text
+	set m to text -2 thru -1 of ("0" &amp; ((month of today) as integer))
+	set d to text -2 thru -1 of ("0" &amp; (day of today))
+	return y &amp; "-" &amp; m &amp; "-" &amp; d
+end todayString
+
+on tomorrowString()
+	set tom to (current date) + (1 * days)
+	set y to year of tom as text
+	set m to text -2 thru -1 of ("0" &amp; ((month of tom) as integer))
+	set d to text -2 thru -1 of ("0" &amp; (day of tom))
+	return y &amp; "-" &amp; m &amp; "-" &amp; d
+end tomorrowString
+
+on replaceText(theText, searchStr, replaceStr)
+	set AppleScript's text item delimiters to searchStr
+	set theItems to text items of theText
+	set AppleScript's text item delimiters to replaceStr
+	set theText to theItems as text
+	set AppleScript's text item delimiters to ""
+	return theText
+end replaceText
+
+on trimText(theText)
+	repeat while theText starts with " "
+		set theText to text 2 thru -1 of theText
+	end repeat
+	repeat while theText ends with " "
+		set theText to text 1 thru -2 of theText
+	end repeat
+	return theText
+end trimText
+
+on encodeText(theText)
+	set theTextEnc to ""
+	repeat with eachChar in characters of theText
+		set useChar to eachChar
+		set eachCharNum to ASCII number of eachChar
+		if eachCharNum = 32 then
+			set useChar to "%20"
+		else if (eachCharNum &gt;= 48 and eachCharNum &lt;= 57) or (eachCharNum &gt;= 65 and eachCharNum &lt;= 90) or (eachCharNum &gt;= 97 and eachCharNum &lt;= 122) then
+			set useChar to eachChar
+		else
+			set useChar to "%" &amp; my toHex(eachCharNum)
+		end if
+		set theTextEnc to theTextEnc &amp; useChar
+	end repeat
+	return theTextEnc
+end encodeText
+
+on toHex(theNum)
+	set hexChars to "0123456789ABCDEF"
+	set theHex to ""
+	repeat with i from 0 to 1
+		set theInt to theNum div (16 ^ (1 - i)) mod 16 + 1
+		set theHex to theHex &amp; character theInt of hexChars
+	end repeat
+	return theHex
+end toHex</string>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.RunScript</string>
+				<key>CFBundleVersion</key>
+				<string>1.0.2</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunScriptAction</string>
+				<key>InputUUID</key>
+				<string>7B4E9A12-3C5D-4F8E-A1B2-9D7E6C8F1A3B</string>
+				<key>Keywords</key>
+				<array>
+					<string>Run</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>8C5F0B23-4D6E-5F9F-B2C3-0E8F7D9G2B4C</string>
+				<key>UUID</key>
+				<string>9D6G1C34-5E7F-6G0G-C3D4-1F9G8E0H3C5D</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default</key>
+						<string>on run {input, parameters}
+
+	(* Your script goes here *)
+
+	return input
+end run</string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>isViewVisible</key>
+				<integer>1</integer>
+				<key>location</key>
+				<string>449.000000:253.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/Base.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict/>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.workflow</string>
+	</dict>
+</dict>
+</plist>
