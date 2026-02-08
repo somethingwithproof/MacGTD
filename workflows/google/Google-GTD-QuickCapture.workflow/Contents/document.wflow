@@ -55,34 +55,137 @@
 	-- Display dialog for quick capture
 	set taskText to ""
 	set taskTitle to "Google GTD Quick Capture"
-	set taskPrompt to "Enter task or note to capture:"
-	
+	set taskPrompt to "Enter task or note to capture:" &amp; return &amp; return &amp; "Priority: !1 (high), !2 (medium), !3 (low)" &amp; return &amp; "Due date: due:today, due:tomorrow, due:YYYY-MM-DD"
+
 	-- Show dialog to get user input
 	display dialog taskPrompt default answer "" with title taskTitle
 	set taskText to text returned of result
-	
+
 	-- Exit if the user didn't enter anything
 	if taskText is "" then
 		display notification "No text entered. Note not created." with title "Google GTD Quick Capture"
 		return
 	end if
-	
+
+	-- Parse priority and due date
+	set priorityLevel to ""
+	set dueDate to ""
+	set cleanedText to taskText
+
+	-- Parse priority (!1, !2, !3)
+	if cleanedText contains "!1" then
+		set priorityLevel to "High"
+		set cleanedText to replaceText(cleanedText, "!1", "")
+	else if cleanedText contains "!2" then
+		set priorityLevel to "Medium"
+		set cleanedText to replaceText(cleanedText, "!2", "")
+	else if cleanedText contains "!3" then
+		set priorityLevel to "Low"
+		set cleanedText to replaceText(cleanedText, "!3", "")
+	end if
+
+	-- Parse due date
+	if cleanedText contains "due:today" then
+		set dueDate to (current date)
+		set year of dueDate to year of dueDate
+		set month of dueDate to month of dueDate
+		set day of dueDate to day of dueDate
+		set dueDate to (year of dueDate as string) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; ((month of dueDate) * 1 as string)) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; (day of dueDate as string))
+		set cleanedText to replaceText(cleanedText, "due:today", "")
+	else if cleanedText contains "due:tomorrow" then
+		set dueDate to (current date) + (1 * days)
+		set year of dueDate to year of dueDate
+		set month of dueDate to month of dueDate
+		set day of dueDate to day of dueDate
+		set dueDate to (year of dueDate as string) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; ((month of dueDate) * 1 as string)) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; (day of dueDate as string))
+		set cleanedText to replaceText(cleanedText, "due:tomorrow", "")
+	else
+		-- Check for due:YYYY-MM-DD format
+		try
+			set AppleScript's text item delimiters to "due:"
+			set textParts to text items of cleanedText
+			if (count of textParts) &gt; 1 then
+				set duePart to item 2 of textParts
+				set AppleScript's text item delimiters to " "
+				set dueDate to first text item of duePart
+				if length of dueDate = 10 and character 5 of dueDate = "-" and character 8 of dueDate = "-" then
+					set cleanedText to replaceText(cleanedText, "due:" &amp; dueDate, "")
+				else
+					set dueDate to ""
+				end if
+			end if
+			set AppleScript's text item delimiters to ""
+		on error
+			set dueDate to ""
+			set AppleScript's text item delimiters to ""
+		end try
+	end if
+
+	-- Clean up extra whitespace
+	set cleanedText to trimText(cleanedText)
+
+	-- Build text with metadata prefix for Google Keep
+	set textWithMetadata to ""
+	if priorityLevel is not "" then
+		set textWithMetadata to "[Priority: " &amp; priorityLevel &amp; "] "
+	end if
+	if dueDate is not "" then
+		set textWithMetadata to textWithMetadata &amp; "[Due: " &amp; dueDate &amp; "] "
+	end if
+	set textWithMetadata to textWithMetadata &amp; cleanedText
+
 	-- Encode the text for use in a URL
-	set encodedText to encodeText(taskText)
-	
+	set encodedText to encodeText(textWithMetadata)
+
 	-- Create Google Keep URL for quick capture
 	set keepURL to "https://keep.google.com/#create/" &amp; encodedText
-	
+
 	-- Open URL in browser
 	tell application "Safari"
 		open location keepURL
 	end tell
-	
-	-- Show notification
-	display notification "Added to Google Keep: " &amp; taskText with title "Google GTD Quick Capture"
-	
+
+	-- Build notification message
+	set notifMsg to "Added to Google Keep: " &amp; cleanedText
+	if priorityLevel is not "" or dueDate is not "" then
+		set notifMsg to notifMsg &amp; " ("
+		if priorityLevel is not "" then
+			set notifMsg to notifMsg &amp; priorityLevel
+		end if
+		if dueDate is not "" then
+			if priorityLevel is not "" then
+				set notifMsg to notifMsg &amp; ", due: " &amp; dueDate
+			else
+				set notifMsg to notifMsg &amp; "due: " &amp; dueDate
+			end if
+		end if
+		set notifMsg to notifMsg &amp; ")"
+	end if
+	display notification notifMsg with title "Google GTD Quick Capture"
+
 	return input
 end run
+
+-- Helper function to replace text
+on replaceText(theText, searchString, replacementString)
+	set AppleScript's text item delimiters to searchString
+	set textItems to text items of theText
+	set AppleScript's text item delimiters to replacementString
+	set newText to textItems as string
+	set AppleScript's text item delimiters to ""
+	return newText
+end replaceText
+
+-- Helper function to trim whitespace
+on trimText(theText)
+	repeat while theText starts with " " or theText starts with tab
+		set theText to text 2 thru -1 of theText
+	end repeat
+	repeat while theText ends with " " or theText ends with tab
+		set theText to text 1 thru -2 of theText
+	end repeat
+	return theText
+end trimText
 
 -- Helper function to URL encode text
 on encodeText(theText)
@@ -149,9 +252,9 @@ end toHex</string>
 					<dict>
 						<key>default value</key>
 						<string>on run {input, parameters}
-	
+
 	(* Your script goes here *)
-	
+
 	return input
 end run</string>
 						<key>name</key>

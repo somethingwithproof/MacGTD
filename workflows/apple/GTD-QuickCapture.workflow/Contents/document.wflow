@@ -55,7 +55,7 @@
 	-- Display dialog for quick capture with enhanced features
 	set taskText to ""
 	set taskTitle to "Quick Capture"
-	set taskPrompt to "Enter task (use !1/!2/!3 for priority, due:today/tomorrow/YYYY-MM-DD for due date):"
+	set taskPrompt to "Enter task (!1/!2/!3 priority, due:today/tomorrow, @context, +project):"
 
 	-- Show dialog to get user input
 	display dialog taskPrompt default answer "" with title taskTitle
@@ -65,6 +65,18 @@
 	if taskText is "" then
 		display notification "No text entered. Task not created." with title "GTD Quick Capture"
 		return
+	end if
+
+	-- Parse context (@context) and project (+project) before priority/due date
+	set contextMarker to my parseMarker(taskText, "@")
+	set projectMarker to my parseMarker(taskText, "+")
+
+	-- Remove markers from task text
+	if contextMarker is not "" then
+		set taskText to my replaceText(taskText, "@" &amp; contextMarker, "")
+	end if
+	if projectMarker is not "" then
+		set taskText to my replaceText(taskText, "+" &amp; projectMarker, "")
 	end if
 
 	-- Parse priority (!1 = high/1, !2 = medium/5, !3 = low/9)
@@ -119,27 +131,59 @@
 	-- Trim whitespace
 	set taskText to my trimText(taskText)
 
-	-- Add the task to Reminders in the Inbox list
+	-- Determine target list (project takes precedence over context)
+	set targetList to missing value
+	set targetListName to "Inbox"
+
 	tell application "Reminders"
 		-- Make sure Reminders is running
 		launch
-		-- Try to find the Inbox list, or use the first list as fallback
-		set inboxList to missing value
-		try
-			set inboxList to list "Inbox"
-		on error
+
+		-- Project takes precedence
+		if projectMarker is not "" then
+			set targetListName to projectMarker
 			try
-				-- Get the first list as a fallback
-				set allLists to every list
-				if (count of allLists) &gt; 0 then
-					set inboxList to first item of allLists
-				end if
+				set targetList to list projectMarker
+			on error
+				-- Create the list if it doesn't exist
+				make new list with properties {name:projectMarker}
+				set targetList to list projectMarker
 			end try
-		end try
+		else if contextMarker is not "" then
+			-- Try to find context list
+			try
+				set targetList to list contextMarker
+				set targetListName to contextMarker
+			on error
+				-- Context list doesn't exist, fall back to Inbox
+				try
+					set targetList to list "Inbox"
+				on error
+					-- Get the first list as a fallback
+					set allLists to every list
+					if (count of allLists) &gt; 0 then
+						set targetList to first item of allLists
+					end if
+				end try
+			end try
+		else
+			-- No context or project, use Inbox
+			try
+				set targetList to list "Inbox"
+			on error
+				try
+					-- Get the first list as a fallback
+					set allLists to every list
+					if (count of allLists) &gt; 0 then
+						set targetList to first item of allLists
+					end if
+				end try
+			end try
+		end if
 
 		-- Create the reminder with parsed properties
-		if inboxList is not missing value then
-			tell inboxList
+		if targetList is not missing value then
+			tell targetList
 				set taskProps to {name:taskText}
 				if taskPriority &gt; 0 then
 					set taskProps to taskProps &amp; {priority:taskPriority}
@@ -152,6 +196,7 @@
 
 			-- Notify the user with details
 			set notifyMsg to "Task added: " &amp; taskText
+			if targetListName is not "Inbox" then set notifyMsg to notifyMsg &amp; " [" &amp; targetListName &amp; "]"
 			if taskPriority &gt; 0 then set notifyMsg to notifyMsg &amp; " (priority set)"
 			if dueDate is not missing value then set notifyMsg to notifyMsg &amp; " (due date set)"
 			display notification notifyMsg with title "GTD Quick Capture"
@@ -163,6 +208,18 @@
 
 	return input
 end run
+
+on parseMarker(theText, prefix)
+	set foundMarker to ""
+	set words to every word of theText
+	repeat with w in words
+		if w starts with prefix then
+			set foundMarker to text 2 thru -1 of (w as text)
+			exit repeat
+		end if
+	end repeat
+	return foundMarker
+end parseMarker
 
 on replaceText(theText, searchStr, replaceStr)
 	set AppleScript's text item delimiters to searchStr
@@ -217,9 +274,9 @@ end trimText</string>
 					<dict>
 						<key>default value</key>
 						<string>on run {input, parameters}
-	
+
 	(* Your script goes here *)
-	
+
 	return input
 end run</string>
 						<key>name</key>

@@ -55,18 +55,84 @@
 	-- Display dialog for quick capture
 	set taskText to ""
 	set taskTitle to "Microsoft GTD Quick Capture"
-	set taskPrompt to "Enter task or note to capture:"
-	
+	set taskPrompt to "Enter task or note to capture:" &amp; return &amp; return &amp; "Priority: !1 (high), !2 (medium), !3 (low)" &amp; return &amp; "Due date: due:today, due:tomorrow, due:YYYY-MM-DD"
+
 	-- Show dialog to get user input
 	display dialog taskPrompt default answer "" with title taskTitle
 	set taskText to text returned of result
-	
+
 	-- Exit if the user didn't enter anything
 	if taskText is "" then
 		display notification "No text entered. Task not created." with title "Microsoft GTD Quick Capture"
 		return
 	end if
-	
+
+	-- Parse priority and due date
+	set priorityLevel to ""
+	set dueDate to ""
+	set cleanedText to taskText
+
+	-- Parse priority (!1, !2, !3)
+	if cleanedText contains "!1" then
+		set priorityLevel to "!1"
+		set cleanedText to replaceText(cleanedText, "!1", "")
+	else if cleanedText contains "!2" then
+		set priorityLevel to "!2"
+		set cleanedText to replaceText(cleanedText, "!2", "")
+	else if cleanedText contains "!3" then
+		set priorityLevel to "!3"
+		set cleanedText to replaceText(cleanedText, "!3", "")
+	end if
+
+	-- Parse due date
+	if cleanedText contains "due:today" then
+		set dueDate to (current date)
+		set year of dueDate to year of dueDate
+		set month of dueDate to month of dueDate
+		set day of dueDate to day of dueDate
+		set dueDate to (year of dueDate as string) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; ((month of dueDate) * 1 as string)) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; (day of dueDate as string))
+		set cleanedText to replaceText(cleanedText, "due:today", "")
+	else if cleanedText contains "due:tomorrow" then
+		set dueDate to (current date) + (1 * days)
+		set year of dueDate to year of dueDate
+		set month of dueDate to month of dueDate
+		set day of dueDate to day of dueDate
+		set dueDate to (year of dueDate as string) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; ((month of dueDate) * 1 as string)) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; (day of dueDate as string))
+		set cleanedText to replaceText(cleanedText, "due:tomorrow", "")
+	else
+		-- Check for due:YYYY-MM-DD format
+		try
+			set AppleScript's text item delimiters to "due:"
+			set textParts to text items of cleanedText
+			if (count of textParts) &gt; 1 then
+				set duePart to item 2 of textParts
+				set AppleScript's text item delimiters to " "
+				set dueDate to first text item of duePart
+				if length of dueDate = 10 and character 5 of dueDate = "-" and character 8 of dueDate = "-" then
+					set cleanedText to replaceText(cleanedText, "due:" &amp; dueDate, "")
+				else
+					set dueDate to ""
+				end if
+			end if
+			set AppleScript's text item delimiters to ""
+		on error
+			set dueDate to ""
+			set AppleScript's text item delimiters to ""
+		end try
+	end if
+
+	-- Clean up extra whitespace
+	set cleanedText to trimText(cleanedText)
+
+	-- Build task text with metadata for Microsoft To Do
+	set taskWithMetadata to cleanedText
+	if priorityLevel is not "" then
+		set taskWithMetadata to priorityLevel &amp; " " &amp; taskWithMetadata
+	end if
+	if dueDate is not "" then
+		set taskWithMetadata to taskWithMetadata &amp; " (due: " &amp; dueDate &amp; ")"
+	end if
+
 	-- Check if Microsoft To Do is installed and running
 	set appExists to false
 	try
@@ -75,28 +141,40 @@
 		-- Error checking if app exists
 		set appExists to false
 	end try
-	
+
 	if not appExists then
 		-- If To Do isn't installed, try opening it in the browser
-		set encodedTask to encodeText(taskText)
+		set encodedTask to encodeText(taskWithMetadata)
 		set todoURL to "https://to-do.microsoft.com/tasks/?quickAdd=" &amp; encodedTask
-		
+
 		tell application "Safari"
 			open location todoURL
 		end tell
-		
-		-- Notify the user
-		display notification "Added task in Microsoft To Do web app" with title "Microsoft GTD Quick Capture"
+
+		-- Build notification message
+		set notifMsg to "Added task in Microsoft To Do web app"
+		if priorityLevel is not "" or dueDate is not "" then
+			set notifMsg to notifMsg &amp; " (" &amp; priorityLevel
+			if dueDate is not "" then
+				if priorityLevel is not "" then
+					set notifMsg to notifMsg &amp; ", due: " &amp; dueDate
+				else
+					set notifMsg to notifMsg &amp; "due: " &amp; dueDate
+				end if
+			end if
+			set notifMsg to notifMsg &amp; ")"
+		end if
+		display notification notifMsg with title "Microsoft GTD Quick Capture"
 	else
 		-- Microsoft To Do is installed, so we'll use it
 		try
 			tell application "Microsoft To Do"
 				activate
 			end tell
-			
+
 			-- Give the app time to open
 			delay 1
-			
+
 			-- Use UI scripting to add a task
 			tell application "System Events"
 				tell process "Microsoft To Do"
@@ -106,31 +184,76 @@
 						click addTaskButton
 						delay 0.5
 					end try
-					
-					-- Type the task text and press return
-					keystroke taskText
+
+					-- Type the task text (with metadata markers) and press return
+					keystroke taskWithMetadata
 					keystroke return
-					
-					-- Notify the user
-					display notification "Task added to Microsoft To Do: " &amp; taskText with title "Microsoft GTD Quick Capture"
+
+					-- Build notification message
+					set notifMsg to "Task added to Microsoft To Do: " &amp; cleanedText
+					if priorityLevel is not "" or dueDate is not "" then
+						set notifMsg to notifMsg &amp; " (" &amp; priorityLevel
+						if dueDate is not "" then
+							if priorityLevel is not "" then
+								set notifMsg to notifMsg &amp; ", due: " &amp; dueDate
+							else
+								set notifMsg to notifMsg &amp; "due: " &amp; dueDate
+							end if
+						end if
+						set notifMsg to notifMsg &amp; ")"
+					end if
+					display notification notifMsg with title "Microsoft GTD Quick Capture"
 				end tell
 			end tell
 		on error errMsg
 			-- If UI scripting fails, try the web approach as fallback
-			set encodedTask to encodeText(taskText)
+			set encodedTask to encodeText(taskWithMetadata)
 			set todoURL to "https://to-do.microsoft.com/tasks/?quickAdd=" &amp; encodedTask
-			
+
 			tell application "Safari"
 				open location todoURL
 			end tell
-			
-			-- Notify the user
-			display notification "Added task in Microsoft To Do web app" with title "Microsoft GTD Quick Capture"
+
+			-- Build notification message
+			set notifMsg to "Added task in Microsoft To Do web app"
+			if priorityLevel is not "" or dueDate is not "" then
+				set notifMsg to notifMsg &amp; " (" &amp; priorityLevel
+				if dueDate is not "" then
+					if priorityLevel is not "" then
+						set notifMsg to notifMsg &amp; ", due: " &amp; dueDate
+					else
+						set notifMsg to notifMsg &amp; "due: " &amp; dueDate
+					end if
+				end if
+				set notifMsg to notifMsg &amp; ")"
+			end if
+			display notification notifMsg with title "Microsoft GTD Quick Capture"
 		end try
 	end if
-	
+
 	return input
 end run
+
+-- Helper function to replace text
+on replaceText(theText, searchString, replacementString)
+	set AppleScript's text item delimiters to searchString
+	set textItems to text items of theText
+	set AppleScript's text item delimiters to replacementString
+	set newText to textItems as string
+	set AppleScript's text item delimiters to ""
+	return newText
+end replaceText
+
+-- Helper function to trim whitespace
+on trimText(theText)
+	repeat while theText starts with " " or theText starts with tab
+		set theText to text 2 thru -1 of theText
+	end repeat
+	repeat while theText ends with " " or theText ends with tab
+		set theText to text 1 thru -2 of theText
+	end repeat
+	return theText
+end trimText
 
 -- Helper function to URL encode text
 on encodeText(theText)
@@ -162,6 +285,7 @@ on toHex(theNum)
 	end repeat
 	return theHex
 end toHex</string>
+
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>

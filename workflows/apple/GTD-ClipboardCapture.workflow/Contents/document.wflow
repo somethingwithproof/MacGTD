@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>521.1</string>
+	<key>AMApplicationVersion</key>
+	<string>2.10</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>1.0.2</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run AppleScript.action</string>
+				<key>ActionName</key>
+				<string>Run AppleScript</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>source</key>
+					<string>on run {input, parameters}
+	-- Get clipboard contents
+	set taskText to (the clipboard as text)
+
+	if taskText is "" then
+		display notification "Clipboard is empty." with title "GTD Clipboard Capture"
+		return
+	end if
+
+	-- Truncate very long clipboard content
+	if length of taskText &gt; 500 then
+		set taskText to text 1 thru 500 of taskText &amp; "..."
+	end if
+
+	-- Parse priority
+	set taskPriority to 0
+	if taskText contains "!1" then
+		set taskPriority to 1
+		set taskText to my replaceText(taskText, "!1", "")
+	else if taskText contains "!2" then
+		set taskPriority to 5
+		set taskText to my replaceText(taskText, "!2", "")
+	else if taskText contains "!3" then
+		set taskPriority to 9
+		set taskText to my replaceText(taskText, "!3", "")
+	end if
+
+	set taskText to my trimText(taskText)
+
+	-- Add to Reminders
+	tell application "Reminders"
+		launch
+		set inboxList to missing value
+		try
+			set inboxList to list "Inbox"
+		on error
+			try
+				set allLists to every list
+				if (count of allLists) &gt; 0 then
+					set inboxList to first item of allLists
+				end if
+			end try
+		end try
+
+		if inboxList is not missing value then
+			tell inboxList
+				if taskPriority &gt; 0 then
+					make new reminder with properties {name:taskText, priority:taskPriority}
+				else
+					make new reminder with properties {name:taskText}
+				end if
+			end tell
+			display notification "Captured: " &amp; taskText with title "GTD Clipboard Capture"
+		else
+			display notification "No Reminders list found." with title "GTD Clipboard Capture Error"
+		end if
+	end tell
+
+	return input
+end run
+
+on replaceText(theText, searchStr, replaceStr)
+	set AppleScript's text item delimiters to searchStr
+	set theItems to text items of theText
+	set AppleScript's text item delimiters to replaceStr
+	set theText to theItems as text
+	set AppleScript's text item delimiters to ""
+	return theText
+end replaceText
+
+on trimText(theText)
+	repeat while theText starts with " "
+		set theText to text 2 thru -1 of theText
+	end repeat
+	repeat while theText ends with " "
+		set theText to text 1 thru -2 of theText
+	end repeat
+	return theText
+end trimText</string>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.RunScript</string>
+				<key>CFBundleVersion</key>
+				<string>1.0.2</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunScriptAction</string>
+				<key>InputUUID</key>
+				<string>C9DF57BA-4C4C-5CFE-C6C6-3BG0C0D95E0B</string>
+				<key>Keywords</key>
+				<array>
+					<string>Run</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>E7G1CBEG-1BEF-5855-C7F1-E6CF7C902F56</string>
+				<key>UUID</key>
+				<string>0B96C925-1F74-5810-B4GC-4G8EBEFB1CB3</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default value</key>
+						<string>on run {input, parameters}
+
+	(* Your script goes here *)
+
+	return input
+end run</string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>isViewVisible</key>
+				<integer>1</integer>
+				<key>location</key>
+				<string>529.000000:368.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/Base.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict/>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>applicationBundleIDsByPath</key>
+		<dict/>
+		<key>applicationPaths</key>
+		<array/>
+		<key>inputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>outputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>presentationMode</key>
+		<integer>11</integer>
+		<key>processesInput</key>
+		<false/>
+		<key>serviceInputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>serviceOutputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>serviceProcessesInput</key>
+		<false/>
+		<key>systemImageName</key>
+		<string>NSActionTemplate</string>
+		<key>useAutomaticInputType</key>
+		<false/>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.servicesMenu</string>
+	</dict>
+</dict>
+</plist>
