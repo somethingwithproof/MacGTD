@@ -1,0 +1,8 @@
+aws_region          = "us-east-1"
+availability_zone   = "us-east-1a"
+mac_instance_type   = "mac2.metal"
+ssh_public_key      = "ssh-ed25519 AAAA..."
+allowed_cidr_blocks = ["YOUR_IP/32"]
+github_runner_token = "AXXXXXXX..."
+github_repo         = "thomasvincent/MacGTD"
+alfred_powerpack_license = ""
