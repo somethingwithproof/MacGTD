@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>bundleid</key>
+    <string>com.thomasvincent.alfredgtd</string>
+    <key>category</key>
+    <string>Productivity</string>
+    <key>connections</key>
+    <dict>
+        <key>0E454D28-2883-4D62-8451-044CE2E37F65</key>
+        <array>
+            <dict>
+                <key>destinationuid</key>
+                <string>E33F7258-0944-4F50-8E0E-171A99EA9902</string>
+                <key>modifiers</key>
+                <integer>0</integer>
+                <key>modifiersubtext</key>
+                <string></string>
+                <key>vitoclose</key>
+                <false/>
+            </dict>
+        </array>
+        <key>2A1D7EDB-A339-4AC1-8CA8-E8AA576A1A9C</key>
+        <array>
+            <dict>
+                <key>destinationuid</key>
+                <string>F8FCFD6F-1511-4F33-A29D-456D53A5AA41</string>
+                <key>modifiers</key>
+                <integer>0</integer>
+                <key>modifiersubtext</key>
+                <string></string>
+                <key>vitoclose</key>
+                <false/>
+            </dict>
+        </array>
+        <key>3DD8C944-C56E-4693-AA9B-547362A6C9D2</key>
+        <array>
+            <dict>
+                <key>destinationuid</key>
+                <string>95A83006-B1A0-4550-9318-CB430B1C44DB</string>
+                <key>modifiers</key>
+                <integer>0</integer>
+                <key>modifiersubtext</key>
+                <string></string>
+                <key>vitoclose</key>
+                <false/>
+            </dict>
+        </array>
+        <key>9CADF03A-7097-42AE-9240-7214CC6F61C1</key>
+        <array>
+            <dict>
+                <key>destinationuid</key>
+                <string>70E1BF61-2967-46A7-B33A-9E2F28D54F14</string>
+                <key>modifiers</key>
+                <integer>0</integer>
+                <key>modifiersubtext</key>
+                <string></string>
+                <key>vitoclose</key>
+                <false/>
+            </dict>
+        </array>
+    </dict>
+    <key>createdby</key>
+    <string>Thomas Vincent</string>
+    <key>description</key>
+    <string>Getting Things Done workflow for Alfred</string>
+    <key>disabled</key>
+    <false/>
+    <key>name</key>
+    <string>AlfredGTD</string>
+    <key>objects</key>
+    <array>
+        <!-- Quick Capture Task -->
+        <dict>
+            <key>config</key>
+            <dict>
+                <key>argumenttype</key>
+                <integer>0</integer>
+                <key>keyword</key>
+                <string>task</string>
+                <key>subtext</key>
+                <string>Create a new task in your GTD system</string>
+                <key>text</key>
+                <string>GTD: Capture Task</string>
+                <key>withspace</key>
+                <true/>
+            </dict>
+            <key>type</key>
+            <string>alfred.workflow.input.keyword</string>
+            <key>uid</key>
+            <string>0E454D28-2883-4D62-8451-044CE2E37F65</string>
+            <key>version</key>
+            <integer>1</integer>
+        </dict>
+        <!-- Run Task Script -->
+        <dict>
+            <key>config</key>
+            <dict>
+                <key>concurrently</key>
+                <false/>
+                <key>escaping</key>
+                <integer>102</integer>
+                <key>script</key>
+                <string>/usr/bin/osascript ./scripts/add_task.scpt "{query}"</string>
+                <key>scriptargtype</key>
+                <integer>0</integer>
+                <key>scriptfile</key>
+                <string></string>
+                <key>type</key>
+                <integer>0</integer>
+            </dict>
+            <key>type</key>
+            <string>alfred.workflow.action.script</string>
+            <key>uid</key>
+            <string>E33F7258-0944-4F50-8E0E-171A99EA9902</string>
+            <key>version</key>
+            <integer>2</integer>
+        </dict>
+        <!-- Quick Capture Note -->
+        <dict>
+            <key>config</key>
+            <dict>
+                <key>argumenttype</key>
+                <integer>0</integer>
+                <key>keyword</key>
+                <string>note</string>
+                <key>subtext</key>
+                <string>Create a new note in your GTD system</string>
+                <key>text</key>
+                <string>GTD: Capture Note</string>
+                <key>withspace</key>
+                <true/>
+            </dict>
+            <key>type</key>
+            <string>alfred.workflow.input.keyword</string>
+            <key>uid</key>
+            <string>2A1D7EDB-A339-4AC1-8CA8-E8AA576A1A9C</string>
+            <key>version</key>
+            <integer>1</integer>
+        </dict>
+        <!-- Run Note Script -->
+        <dict>
+            <key>config</key>
+            <dict>
+                <key>concurrently</key>
+                <false/>
+                <key>escaping</key>
+                <integer>102</integer>
+                <key>script</key>
+                <string>/usr/bin/osascript ./scripts/add_note.scpt "{query}"</string>
+                <key>scriptargtype</key>
+                <integer>0</integer>
+                <key>scriptfile</key>
+                <string></string>
+                <key>type</key>
+                <integer>0</integer>
+            </dict>
+            <key>type</key>
+            <string>alfred.workflow.action.script</string>
+            <key>uid</key>
+            <string>F8FCFD6F-1511-4F33-A29D-456D53A5AA41</string>
+            <key>version</key>
+            <integer>2</integer>
+        </dict>
+        <!-- Quick Capture Project -->
+        <dict>
+            <key>config</key>
+            <dict>
+                <key>argumenttype</key>
+                <integer>0</integer>
+                <key>keyword</key>
+                <string>project</string>
+                <key>subtext</key>
+                <string>Create a new project in your GTD system</string>
+                <key>text</key>
+                <string>GTD: Create Project</string>
+                <key>withspace</key>
+                <true/>
+            </dict>
+            <key>type</key>
+            <string>alfred.workflow.input.keyword</string>
+            <key>uid</key>
+            <string>3DD8C944-C56E-4693-AA9B-547362A6C9D2</string>
+            <key>version</key>
+            <integer>1</integer>
+        </dict>
+        <!-- Run Project Script -->
+        <dict>
+            <key>config</key>
+            <dict>
+                <key>concurrently</key>
+                <false/>
+                <key>escaping</key>
+                <integer>102</integer>
+                <key>script</key>
+                <string>/usr/bin/osascript ./scripts/add_project.scpt "{query}"</string>
+                <key>scriptargtype</key>
+                <integer>0</integer>
+                <key>scriptfile</key>
+                <string></string>
+                <key>type</key>
+                <integer>0</integer>
+            </dict>
+            <key>type</key>
+            <string>alfred.workflow.action.script</string>
+            <key>uid</key>
+            <string>95A83006-B1A0-4550-9318-CB430B1C44DB</string>
+            <key>version</key>
+            <integer>2</integer>
+        </dict>
+        <!-- GTD Process Inbox -->
+        <dict>
+            <key>config</key>
+            <dict>
+                <key>argumenttype</key>
+                <integer>2</integer>
+                <key>keyword</key>
+                <string>gtd process</string>
+                <key>subtext</key>
+                <string>Process your GTD inbox</string>
+                <key>text</key>
+                <string>GTD: Process Inbox</string>
+                <key>withspace</key>
+                <false/>
+            </dict>
+            <key>type</key>
+            <string>alfred.workflow.input.keyword</string>
+            <key>uid</key>
+            <string>9CADF03A-7097-42AE-9240-7214CC6F61C1</string>
+            <key>version</key>
+            <integer>1</integer>
+        </dict>
+        <!-- Run Process Inbox Script -->
+        <dict>
+            <key>config</key>
+            <dict>
+                <key>concurrently</key>
+                <false/>
+                <key>escaping</key>
+                <integer>102</integer>
+                <key>script</key>
+                <string>/usr/bin/osascript ./scripts/process_inbox.scpt</string>
+                <key>scriptargtype</key>
+                <integer>0</integer>
+                <key>scriptfile</key>
+                <string></string>
+                <key>type</key>
+                <integer>0</integer>
+            </dict>
+            <key>type</key>
+            <string>alfred.workflow.action.script</string>
+            <key>uid</key>
+            <string>70E1BF61-2967-46A7-B33A-9E2F28D54F14</string>
+            <key>version</key>
+            <integer>2</integer>
+        </dict>
+    </array>
+    <key>readme</key>
+    <string># AlfredGTD
+
+An Alfred workflow that implements GTD (Getting Things Done) functionality.
+
+## Features
+
+- Quick capture tasks, notes, and projects
+- Process your GTD inbox
+- View pending tasks and next actions
+- Review projects
+- Weekly review process guide
+
+## Usage
+
+- `task [text]` - Create a new task in your GTD inbox
+- `note [text]` - Create a new note in your reference system
+- `project [text]` - Create a new project
+- `gtd process` - Process your GTD inbox
+
+## Requirements
+
+- Alfred 4 or later with Powerpack
+- macOS 10.14 or later
+
+## Documentation
+
+See the README.md file for detailed documentation.</string>
+    <key>uidata</key>
+    <dict>
+        <key>0E454D28-2883-4D62-8451-044CE2E37F65</key>
+        <dict>
+            <key>xpos</key>
+            <integer>100</integer>
+            <key>ypos</key>
+            <integer>100</integer>
+        </dict>
+        <key>2A1D7EDB-A339-4AC1-8CA8-E8AA576A1A9C</key>
+        <dict>
+            <key>xpos</key>
+            <integer>100</integer>
+            <key>ypos</key>
+            <integer>250</integer>
+        </dict>
+        <key>3DD8C944-C56E-4693-AA9B-547362A6C9D2</key>
+        <dict>
+            <key>xpos</key>
+            <integer>100</integer>
+            <key>ypos</key>
+            <integer>400</integer>
+        </dict>
+        <key>70E1BF61-2967-46A7-B33A-9E2F28D54F14</key>
+        <dict>
+            <key>xpos</key>
+            <integer>500</integer>
+            <key>ypos</key>
+            <integer>550</integer>
+        </dict>
+        <key>95A83006-B1A0-4550-9318-CB430B1C44DB</key>
+        <dict>
+            <key>xpos</key>
+            <integer>500</integer>
+            <key>ypos</key>
+            <integer>400</integer>
+        </dict>
+        <key>9CADF03A-7097-42AE-9240-7214CC6F61C1</key>
+        <dict>
+            <key>xpos</key>
+            <integer>100</integer>
+            <key>ypos</key>
+            <integer>550</integer>
+        </dict>
+        <key>E33F7258-0944-4F50-8E0E-171A99EA9902</key>
+        <dict>
+            <key>xpos</key>
+            <integer>500</integer>
+            <key>ypos</key>
+            <integer>100</integer>
+        </dict>
+        <key>F8FCFD6F-1511-4F33-A29D-456D53A5AA41</key>
+        <dict>
+            <key>xpos</key>
+            <integer>500</integer>
+            <key>ypos</key>
+            <integer>250</integer>
+        </dict>
+    </dict>
+    <key>version</key>
+    <string>1.1.0-beta.1</string>
+    <key>webaddress</key>
+    <string>https://github.com/thomasvincent/AlfredGTD</string>
+</dict>
+</plist>

@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>521.1</string>
+	<key>AMApplicationVersion</key>
+	<string>2.10</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>1.0.2</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run AppleScript.action</string>
+				<key>ActionName</key>
+				<string>Run AppleScript</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>source</key>
+					<string>on run {input, parameters}
+	-- Display dialog for quick capture
+	set taskText to ""
+	set taskTitle to "Microsoft GTD Quick Capture"
+	set taskPrompt to "Enter task or note to capture:"
+	
+	-- Show dialog to get user input
+	display dialog taskPrompt default answer "" with title taskTitle
+	set taskText to text returned of result
+	
+	-- Exit if the user didn't enter anything
+	if taskText is "" then
+		display notification "No text entered. Task not created." with title "Microsoft GTD Quick Capture"
+		return
+	end if
+	
+	-- Check if Microsoft To Do is installed and running
+	set appExists to false
+	try
+		tell application "System Events" to set appExists to exists application process "Microsoft To Do"
+	on error
+		-- Error checking if app exists
+		set appExists to false
+	end try
+	
+	if not appExists then
+		-- If To Do isn't installed, try opening it in the browser
+		set encodedTask to encodeText(taskText)
+		set todoURL to "https://to-do.microsoft.com/tasks/?quickAdd=" &amp; encodedTask
+		
+		tell application "Safari"
+			open location todoURL
+		end tell
+		
+		-- Notify the user
+		display notification "Added task in Microsoft To Do web app" with title "Microsoft GTD Quick Capture"
+	else
+		-- Microsoft To Do is installed, so we'll use it
+		try
+			tell application "Microsoft To Do"
+				activate
+			end tell
+			
+			-- Give the app time to open
+			delay 1
+			
+			-- Use UI scripting to add a task
+			tell application "System Events"
+				tell process "Microsoft To Do"
+					-- Try to find and click the "Add a task" button/field
+					try
+						set addTaskButton to first button whose description contains "Add a task" or name contains "Add a task"
+						click addTaskButton
+						delay 0.5
+					end try
+					
+					-- Type the task text and press return
+					keystroke taskText
+					keystroke return
+					
+					-- Notify the user
+					display notification "Task added to Microsoft To Do: " &amp; taskText with title "Microsoft GTD Quick Capture"
+				end tell
+			end tell
+		on error errMsg
+			-- If UI scripting fails, try the web approach as fallback
+			set encodedTask to encodeText(taskText)
+			set todoURL to "https://to-do.microsoft.com/tasks/?quickAdd=" &amp; encodedTask
+			
+			tell application "Safari"
+				open location todoURL
+			end tell
+			
+			-- Notify the user
+			display notification "Added task in Microsoft To Do web app" with title "Microsoft GTD Quick Capture"
+		end try
+	end if
+	
+	return input
+end run
+
+-- Helper function to URL encode text
+on encodeText(theText)
+	set theTextEnc to ""
+	repeat with eachChar in characters of theText
+		set useChar to eachChar
+		set eachCharNum to ASCII number of eachChar
+		if eachCharNum = 32 then -- space
+			set useChar to "+"
+		else if (eachCharNum ≥ 48 and eachCharNum ≤ 57) or ¬
+			(eachCharNum ≥ 65 and eachCharNum ≤ 90) or ¬
+			(eachCharNum ≥ 97 and eachCharNum ≤ 122) then -- 0-9A-Za-z
+			set useChar to eachChar
+		else
+			set useChar to "%" &amp; my toHex(eachCharNum)
+		end if
+		set theTextEnc to theTextEnc &amp; useChar
+	end repeat
+	return theTextEnc
+end encodeText
+
+-- Helper function to convert to hex
+on toHex(theNum)
+	set hexChars to "0123456789ABCDEF"
+	set theHex to ""
+	repeat with i from 0 to 1
+		set theInt to theNum div (16 ^ (1 - i)) mod 16 + 1
+		set theHex to theHex &amp; character theInt of hexChars
+	end repeat
+	return theHex
+end toHex</string>
+				</dict>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.RunScript</string>
+				<key>CFBundleVersion</key>
+				<string>1.0.2</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunScriptAction</string>
+				<key>InputUUID</key>
+				<string>B8CE46AA-3B3B-4BFE-B5B5-2AF9B9C94D9A</string>
+				<key>Keywords</key>
+				<array>
+					<string>Run</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>D6F0BADF-0ADE-4744-B6E0-D5BE6B891E45</string>
+				<key>UUID</key>
+				<string>9A85B814-0F63-4709-A3FB-3F7DADEA0BA2</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default value</key>
+						<string>on run {input, parameters}
+	
+	(* Your script goes here *)
+	
+	return input
+end run</string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>isViewVisible</key>
+				<integer>1</integer>
+				<key>location</key>
+				<string>529.000000:368.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/Base.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict/>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>applicationBundleIDsByPath</key>
+		<dict/>
+		<key>applicationPaths</key>
+		<array/>
+		<key>inputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>outputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>presentationMode</key>
+		<integer>11</integer>
+		<key>processesInput</key>
+		<false/>
+		<key>serviceInputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>serviceOutputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>serviceProcessesInput</key>
+		<false/>
+		<key>systemImageName</key>
+		<string>NSActionTemplate</string>
+		<key>useAutomaticInputType</key>
+		<false/>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.servicesMenu</string>
+	</dict>
+</dict>
+</plist>

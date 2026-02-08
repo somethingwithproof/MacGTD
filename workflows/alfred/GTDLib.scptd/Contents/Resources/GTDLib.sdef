@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
+<dictionary title="GTD Terminology">
+    <suite name="GTD Suite" code="GTD " description="Commands and classes for Getting Things Done task management">
+        
+        <!-- Commands -->
+        <command name="create task" code="GTDCtask" description="Create a new task">
+            <direct-parameter type="text" description="The task title"/>
+            <parameter name="with context" code="ctxt" type="text" optional="yes" description="The context for the task (e.g., @home, @work)"/>
+            <parameter name="priority" code="prio" type="integer" optional="yes" description="Task priority (1=high, 2=medium, 3=low)">
+                <cocoa key="priority"/>
+            </parameter>
+            <parameter name="due date" code="dued" type="date" optional="yes" description="When the task is due">
+                <cocoa key="dueDate"/>
+            </parameter>
+            <result type="task info" description="Information about the created task"/>
+        </command>
+        
+        <command name="get dashboard" code="GTDDdash" description="Get GTD dashboard information">
+            <result type="dashboard info" description="Current dashboard statistics"/>
+        </command>
+        
+        <command name="start focus session" code="GTDFfocs" description="Start a focus mode session">
+            <direct-parameter type="text" description="The context to focus on"/>
+            <parameter name="duration" code="dura" type="integer" description="Duration in minutes (1-180)">
+                <cocoa key="duration"/>
+            </parameter>
+            <result type="session info" description="Information about the focus session"/>
+        </command>
+        
+        <command name="process inbox" code="GTDPinbx" description="Process items in the GTD inbox">
+            <result type="integer" description="Number of items processed"/>
+        </command>
+        
+        <command name="add note" code="GTDAnote" description="Add a note to a task or project">
+            <direct-parameter type="text" description="The note content"/>
+            <parameter name="to task" code="task" type="text" optional="yes" description="Task ID to attach the note to">
+                <cocoa key="taskId"/>
+            </parameter>
+            <parameter name="to project" code="proj" type="text" optional="yes" description="Project name to attach the note to">
+                <cocoa key="projectName"/>
+            </parameter>
+            <result type="boolean" description="Success status"/>
+        </command>
+        
+        <!-- Record Types -->
+        <record-type name="task info" code="GTDtinfo" description="Information about a task">
+            <property name="id" code="ID  " type="text" description="Unique identifier for the task">
+                <cocoa key="id"/>
+            </property>
+            <property name="title" code="titl" type="text" description="Task title">
+                <cocoa key="title"/>
+            </property>
+            <property name="context" code="ctxt" type="text" description="Task context">
+                <cocoa key="context"/>
+            </property>
+            <property name="priority" code="prio" type="integer" description="Task priority">
+                <cocoa key="priority"/>
+            </property>
+            <property name="due date" code="dued" type="date" description="Task due date">
+                <cocoa key="dueDate"/>
+            </property>
+            <property name="created date" code="cred" type="date" description="When task was created">
+                <cocoa key="createdDate"/>
+            </property>
+        </record-type>
+        
+        <record-type name="dashboard info" code="GTDdinfo" description="GTD dashboard statistics">
+            <property name="inbox count" code="inbc" type="integer" description="Number of items in inbox">
+                <cocoa key="inboxCount"/>
+            </property>
+            <property name="today count" code="todc" type="integer" description="Number of tasks due today">
+                <cocoa key="todayCount"/>
+            </property>
+            <property name="overdue count" code="ovdc" type="integer" description="Number of overdue tasks">
+                <cocoa key="overdueCount"/>
+            </property>
+            <property name="next actions count" code="nxtc" type="integer" description="Number of next actions">
+                <cocoa key="nextActionsCount"/>
+            </property>
+            <property name="projects count" code="prjc" type="integer" description="Number of active projects">
+                <cocoa key="projectsCount"/>
+            </property>
+            <property name="contexts" code="ctxs" type="list of text" description="List of available contexts">
+                <cocoa key="contexts"/>
+            </property>
+        </record-type>
+        
+        <record-type name="session info" code="GTDsinfo" description="Focus session information">
+            <property name="session id" code="sid " type="text" description="Unique session identifier">
+                <cocoa key="sessionId"/>
+            </property>
+            <property name="context" code="ctxt" type="text" description="Focus context">
+                <cocoa key="context"/>
+            </property>
+            <property name="start time" code="strt" type="date" description="When session started">
+                <cocoa key="startTime"/>
+            </property>
+            <property name="end time" code="endt" type="date" description="When session will end">
+                <cocoa key="endTime"/>
+            </property>
+            <property name="duration" code="dura" type="integer" description="Duration in minutes">
+                <cocoa key="duration"/>
+            </property>
+        </record-type>
+        
+        <!-- Enumerations -->
+        <enumeration name="task priority" code="GTDprio">
+            <enumerator name="high priority" code="high" description="High priority task"/>
+            <enumerator name="medium priority" code="medm" description="Medium priority task"/>
+            <enumerator name="low priority" code="low " description="Low priority task"/>
+        </enumeration>
+        
+        <enumeration name="task status" code="GTDstat">
+            <enumerator name="pending" code="pend" description="Task is pending"/>
+            <enumerator name="in progress" code="prog" description="Task is in progress"/>
+            <enumerator name="completed" code="comp" description="Task is completed"/>
+            <enumerator name="cancelled" code="canc" description="Task was cancelled"/>
+        </enumeration>
+        
+        <!-- Classes -->
+        <class name="GTD application" code="capp" description="The GTDLib script library">
+            <cocoa class="NSApplication"/>
+            <property name="version" code="vers" type="text" access="r" description="Version of GTDLib">
+                <cocoa key="version"/>
+            </property>
+            <property name="default context" code="dfct" type="text" access="rw" description="Default context for new tasks">
+                <cocoa key="defaultContext"/>
+            </property>
+            <property name="task service" code="tsvc" type="text" access="rw" description="Current task service (reminders, things, omnifocus)">
+                <cocoa key="taskService"/>
+            </property>
+        </class>
+        
+    </suite>
+</dictionary>
