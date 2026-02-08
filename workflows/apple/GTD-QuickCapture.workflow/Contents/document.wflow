@@ -52,55 +52,136 @@
 				<dict>
 					<key>source</key>
 					<string>on run {input, parameters}
-	-- Display dialog for quick capture
+	-- Display dialog for quick capture with enhanced features
 	set taskText to ""
 	set taskTitle to "Quick Capture"
-	set taskPrompt to "Enter task or note to capture:"
-	
+	set taskPrompt to "Enter task (use !1/!2/!3 for priority, due:today/tomorrow/YYYY-MM-DD for due date):"
+
 	-- Show dialog to get user input
 	display dialog taskPrompt default answer "" with title taskTitle
 	set taskText to text returned of result
-	
+
 	-- Exit if the user didn't enter anything
 	if taskText is "" then
 		display notification "No text entered. Task not created." with title "GTD Quick Capture"
 		return
 	end if
-	
+
+	-- Parse priority (!1 = high/1, !2 = medium/5, !3 = low/9)
+	set taskPriority to 0
+	if taskText contains "!1" then
+		set taskPriority to 1
+		set taskText to my replaceText(taskText, "!1", "")
+	else if taskText contains "!2" then
+		set taskPriority to 5
+		set taskText to my replaceText(taskText, "!2", "")
+	else if taskText contains "!3" then
+		set taskPriority to 9
+		set taskText to my replaceText(taskText, "!3", "")
+	end if
+
+	-- Parse due date
+	set dueDate to missing value
+	set today to current date
+
+	if taskText contains "due:today" then
+		set dueDate to today
+		set taskText to my replaceText(taskText, "due:today", "")
+	else if taskText contains "due:tomorrow" then
+		set dueDate to today + (1 * days)
+		set taskText to my replaceText(taskText, "due:tomorrow", "")
+	else
+		-- Try to find due:YYYY-MM-DD pattern
+		try
+			set AppleScript's text item delimiters to "due:"
+			set parts to text items of taskText
+			if (count of parts) &gt; 1 then
+				set dateStr to word 1 of item 2 of parts
+				if dateStr contains "-" then
+					set AppleScript's text item delimiters to "-"
+					set dateParts to text items of dateStr
+					if (count of dateParts) = 3 then
+						set dueDate to current date
+						set year of dueDate to (item 1 of dateParts as integer)
+						set month of dueDate to (item 2 of dateParts as integer)
+						set day of dueDate to (item 3 of dateParts as integer)
+						set hours of dueDate to 0
+						set minutes of dueDate to 0
+						set seconds of dueDate to 0
+						set taskText to my replaceText(taskText, "due:" &amp; dateStr, "")
+					end if
+				end if
+			end if
+			set AppleScript's text item delimiters to ""
+		end try
+	end if
+
+	-- Trim whitespace
+	set taskText to my trimText(taskText)
+
 	-- Add the task to Reminders in the Inbox list
 	tell application "Reminders"
 		-- Make sure Reminders is running
 		launch
 		-- Try to find the Inbox list, or use the first list as fallback
-		set inboxList to null
+		set inboxList to missing value
 		try
 			set inboxList to list "Inbox"
 		on error
 			try
 				-- Get the first list as a fallback
 				set allLists to every list
-				if (count of allLists) > 0 then
+				if (count of allLists) &gt; 0 then
 					set inboxList to first item of allLists
 				end if
 			end try
 		end try
-		
-		-- Create the reminder
-		if inboxList is not null then
+
+		-- Create the reminder with parsed properties
+		if inboxList is not missing value then
 			tell inboxList
-				make new reminder with properties {name:taskText}
+				set taskProps to {name:taskText}
+				if taskPriority &gt; 0 then
+					set taskProps to taskProps &amp; {priority:taskPriority}
+				end if
+				if dueDate is not missing value then
+					set taskProps to taskProps &amp; {due date:dueDate}
+				end if
+				make new reminder with properties taskProps
 			end tell
-			
-			-- Notify the user
-			display notification "Task added to Reminders: " &amp; taskText with title "GTD Quick Capture"
+
+			-- Notify the user with details
+			set notifyMsg to "Task added: " &amp; taskText
+			if taskPriority &gt; 0 then set notifyMsg to notifyMsg &amp; " (priority set)"
+			if dueDate is not missing value then set notifyMsg to notifyMsg &amp; " (due date set)"
+			display notification notifyMsg with title "GTD Quick Capture"
 		else
 			-- If no suitable list was found
 			display notification "Could not find a suitable Reminders list." with title "GTD Quick Capture Error"
 		end if
 	end tell
-	
+
 	return input
-end run</string>
+end run
+
+on replaceText(theText, searchStr, replaceStr)
+	set AppleScript's text item delimiters to searchStr
+	set theItems to text items of theText
+	set AppleScript's text item delimiters to replaceStr
+	set theText to theItems as text
+	set AppleScript's text item delimiters to ""
+	return theText
+end replaceText
+
+on trimText(theText)
+	repeat while theText starts with " "
+		set theText to text 2 thru -1 of theText
+	end repeat
+	repeat while theText ends with " "
+		set theText to text 1 thru -2 of theText
+	end repeat
+	return theText
+end trimText</string>
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>

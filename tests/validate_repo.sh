@@ -36,7 +36,7 @@ for f in README.md LICENSE CHANGELOG.md CONTRIBUTING.md SECURITY.md CODEOWNERS; 
     fi
 done
 
-for d in workflows/apple workflows/microsoft workflows/google workflows/alfred; do
+for d in workflows/apple workflows/microsoft workflows/google workflows/alfred workflows/shortcuts; do
     if [[ -d "${REPO_ROOT}/${d}" ]]; then
         pass "${d}/ exists"
     else
@@ -103,6 +103,27 @@ if [[ "${SCRIPT_COUNT}" -ge 1 ]]; then
     pass "Alfred scripts present (${SCRIPT_COUNT} files)"
 else
     fail "No Alfred scripts found"
+fi
+
+# --- Shortcuts checks ---
+section "Shortcuts integration"
+
+if [[ -d "${REPO_ROOT}/workflows/shortcuts" ]]; then
+    pass "shortcuts/ directory exists"
+else
+    fail "shortcuts/ directory missing"
+fi
+
+if [[ -f "${REPO_ROOT}/workflows/shortcuts/install-shortcut.sh" ]]; then
+    pass "install-shortcut.sh exists"
+else
+    fail "install-shortcut.sh missing"
+fi
+
+if [[ -x "${REPO_ROOT}/workflows/shortcuts/install-shortcut.sh" ]]; then
+    pass "install-shortcut.sh is executable"
+else
+    fail "install-shortcut.sh not executable"
 fi
 
 # --- CI checks ---
