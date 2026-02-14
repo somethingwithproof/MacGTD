@@ -167,7 +167,7 @@ on addTaskToOmniFocus(taskText)
 			end try
 			
 			-- Create task
-			tell default document
+			tell front document
 				set theInbox to inbox
 				set theTask to make new inbox task with properties {name:taskText}
 			end tell
