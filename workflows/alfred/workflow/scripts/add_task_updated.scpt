@@ -158,29 +158,16 @@ end addTaskToThings
 
 on addTaskToOmniFocus(taskText)
 	try
-		-- Check if OmniFocus is accessible and create task
-		-- `using terms from` lets the script compile on CI hosts without OmniFocus installed
-		using terms from application "OmniFocus"
-			tell application "OmniFocus"
-				try
-					get version
-				on error
-					error "Cannot access OmniFocus. Please grant automation permission." number errorCodes's kGTDAppPermissionErr
-				end try
-
-				-- Create task
-				tell front document
-					set theInbox to inbox
-					set theTask to make new inbox task with properties {name:taskText}
-				end tell
-			end tell
-		end using terms from
-		
+		-- Defer to a sub-osascript so this file compiles on hosts without OmniFocus.
+		set quotedText to quoted form of taskText
+		set cmd to "osascript -e 'tell application \"OmniFocus\"' -e 'try' -e 'get version' -e 'on error' -e 'error number -1' -e 'end try' -e 'tell front document' -e 'set theTask to make new inbox task with properties {name:(system attribute \"OF_TASK_NAME\")}' -e 'end tell' -e 'end tell'"
+		do shell script "OF_TASK_NAME=" & quotedText & " " & cmd
 		display notification "Task added to OmniFocus: " & taskText with title "AlfredGTD"
-		
-		return theTask
-		
+		return true
 	on error errMsg number errNum
+		if errNum is -1 then
+			error "Cannot access OmniFocus. Please grant automation permission." number errorCodes's kGTDAppPermissionErr
+		end if
 		if errNum is 0 then set errNum to errorCodes's kGTDTaskCreationErr
 		error errMsg number errNum
 	end try
