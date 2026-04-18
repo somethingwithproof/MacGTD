@@ -158,20 +158,23 @@ end addTaskToThings
 
 on addTaskToOmniFocus(taskText)
 	try
-		-- Check if OmniFocus is accessible
-		tell application "OmniFocus"
-			try
-				get version
-			on error
-				error "Cannot access OmniFocus. Please grant automation permission." number errorCodes's kGTDAppPermissionErr
-			end try
-			
-			-- Create task
-			tell front document
-				set theInbox to inbox
-				set theTask to make new inbox task with properties {name:taskText}
+		-- Check if OmniFocus is accessible and create task
+		-- `using terms from` lets the script compile on CI hosts without OmniFocus installed
+		using terms from application "OmniFocus"
+			tell application "OmniFocus"
+				try
+					get version
+				on error
+					error "Cannot access OmniFocus. Please grant automation permission." number errorCodes's kGTDAppPermissionErr
+				end try
+
+				-- Create task
+				tell front document
+					set theInbox to inbox
+					set theTask to make new inbox task with properties {name:taskText}
+				end tell
 			end tell
-		end tell
+		end using terms from
 		
 		display notification "Task added to OmniFocus: " & taskText with title "AlfredGTD"
 		
