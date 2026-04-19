@@ -134,22 +134,21 @@
 	-- Check if OmniFocus is installed
 	set ofInstalled to false
 	try
-		tell application "System Events"
-			set ofInstalled to exists application file id "com.omnigroup.OmniFocus3" or exists application file id "com.omnigroup.OmniFocus4"
-		end tell
+		try
+			set ofPath3 to do shell script "mdfind \"kMDItemCFBundleIdentifier==com.omnigroup.OmniFocus3\" | head -1"
+			if ofPath3 is not "" then set ofInstalled to true
+		end try
+		try
+			set ofPath4 to do shell script "mdfind \"kMDItemCFBundleIdentifier==com.omnigroup.OmniFocus4\" | head -1"
+			if ofPath4 is not "" then set ofInstalled to true
+		end try
 	end try
 
 	if ofInstalled then
-		-- Use AppleScript
-		tell application "OmniFocus"
-			tell default document
-				set taskProps to {name:taskText, flagged:isFlagged}
-				set newTask to make new inbox task with properties taskProps
-				if dueDate is not missing value then
-					set due date of newTask to dueDate
-				end if
-			end tell
-		end tell
+		-- Defer to sub-osascript so this workflow compiles without OmniFocus terms.
+		set quotedText to quoted form of taskText
+		set quotedFlag to quoted form of (isFlagged as string)
+		do shell script "osascript -e 'on run argv' -e 'using terms from application \"OmniFocus\"' -e 'tell application \"OmniFocus\"' -e 'tell default document' -e 'set newTask to make new inbox task with properties {name:(item 1 of argv), flagged:(item 2 of argv is \"true\")}' -e 'end tell' -e 'end tell' -e 'end using terms from' -e 'end run' -- " &amp; quotedText &amp; " " &amp; quotedFlag
 
 		set notifyMsg to "Task added to OmniFocus: " &amp; taskText
 		if isFlagged then set notifyMsg to notifyMsg &amp; " (flagged)"
