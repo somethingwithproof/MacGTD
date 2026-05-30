@@ -10,17 +10,23 @@ PASSED=0
 FAILED=0
 
 section() {
-    echo -e "\n${YELLOW}$1${NC}"
+    local title="$1"
+    echo -e "\n${YELLOW}${title}${NC}"
+    return 0
 }
 
 pass() {
-    echo -e "  ${GREEN}✓${NC} $1"
+    local message="$1"
+    echo -e "  ${GREEN}✓${NC} ${message}"
     PASSED=$((PASSED + 1))
+    return 0
 }
 
 fail() {
-    echo -e "  ${RED}✗${NC} $1"
+    local message="$1"
+    echo -e "  ${RED}✗${NC} ${message}"
     FAILED=$((FAILED + 1))
+    return 0
 }
 
 section "Automator Workflow Loading Tests"

@@ -5,17 +5,32 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
+SEPARATOR="============================================"
 
 RUNNER_DIR="$HOME/actions-runner"
 REPO="thomasvincent/MacGTD"
 
-info()  { echo -e "${GREEN}>>>${NC} $1"; }
-warn()  { echo -e "${YELLOW}>>>${NC} $1"; }
-error() { echo -e "${RED}>>>${NC} $1"; }
+info() {
+    local message="$1"
+    echo -e "${GREEN}>>>${NC} ${message}"
+    return 0
+}
 
-echo "============================================"
+warn() {
+    local message="$1"
+    echo -e "${YELLOW}>>>${NC} ${message}"
+    return 0
+}
+
+error() {
+    local message="$1"
+    echo -e "${RED}>>>${NC} ${message}"
+    return 0
+}
+
+echo "$SEPARATOR"
 echo "  MacGTD Local E2E Runner Setup"
-echo "============================================"
+echo "$SEPARATOR"
 echo ""
 
 # --- Check prerequisites ---
@@ -142,9 +157,9 @@ launchctl load "$PLIST_PATH"
 
 # --- Verify ---
 echo ""
-info "============================================"
+info "$SEPARATOR"
 info "  Setup Complete!"
-info "============================================"
+info "$SEPARATOR"
 echo ""
 echo "  Runner name:  macgtd-local-$(hostname -s)"
 echo "  Runner dir:   $RUNNER_DIR"
