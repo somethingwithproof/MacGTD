@@ -7,9 +7,7 @@ name: Dependabot Auto-Merge
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
-  checks: read
+  contents: read
 
 concurrency:
   group: dependabot-auto-merge
@@ -18,6 +16,11 @@ concurrency:
 jobs:
   merge:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
     steps:
       - name: Merge Dependabot pull requests with successful checks
         shell: bash
@@ -25,34 +28,102 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
 
-          gh pr list \
-            --repo "$GITHUB_REPOSITORY" \
-            --state open \
-            --author "app/dependabot" \
-            --json number,isDraft,mergeable \
-            --jq '.[] |
-              select(.isDraft == false and .mergeable == "MERGEABLE") |
-              .number' |
-          while read -r pr; do
-            [ -n "$pr" ] || continue
+          REPO = os.environ.get('GITHUB_REPOSITORY', '')
+          PASSING = {'SUCCESS', 'SKIPPED', 'NEUTRAL'}
+          VERSION = re.compile(
+              r'^v?(\d+)\.(\d+)(?:\.(\d+))?(?:\.\d+)*(?:\+[0-9A-Za-z.\-]+)?$'
+          )
+          SINGLE = re.compile(r'\bbump \S+ from (\S+) to (\S+?)(?: in .*)?$')
+          BODY = re.compile(r'^Updates `[^`]+` from (\S+) to (\S+)', re.M)
+          COUNT = re.compile(r'\bwith (\d+) updates?\b')
 
-            states=$(gh pr checks "$pr" \
-              --repo "$GITHUB_REPOSITORY" \
-              --json state \
-              --jq '.[].state' 2>/dev/null || true)
 
-            # Fail closed when a repository has no CI checks.
-            [ -n "$states" ] || continue
+          def small_bump(old, new):
+              """True only for a semver patch or minor bump."""
+              a, b = VERSION.match(old), VERSION.match(new)
+              if not a or not b:
+                  return False
+              if a.group(1) != b.group(1):
+                  return False
+              # 0.x minor bumps may break callers, so treat them as major.
+              if a.group(1) == '0' and a.group(2) != b.group(2):
+                  return False
+              return True
 
-            blocked='^(PENDING|QUEUED|IN_PROGRESS|FAILURE|ERROR|CANCELLED|'
-            blocked+='STALE|ACTION_REQUIRED)$'
-            if grep -Eq "$blocked" <<<"$states"; then
-              continue
-            fi
 
-            gh pr merge "$pr" \
-              --repo "$GITHUB_REPOSITORY" \
-              --squash \
-              --delete-branch
-          done
+          def releasable(title, body):
+              """True when every dependency in the PR is a patch or minor."""
+              pairs = BODY.findall(body)
+              single = SINGLE.search(title)
+              if single:
+                  pairs = [single.groups()]
+              else:
+                  count = COUNT.search(title)
+                  if not pairs or not count or len(pairs) < int(count.group(1)):
+                      return False
+              return all(small_bump(o, n) for o, n in pairs)
+
+
+          def gh(*args):
+              return subprocess.run(
+                  ['gh', *args, '--repo', REPO],
+                  capture_output=True, text=True, check=False,
+              )
+
+
+          def checks_pass(number):
+              proc = gh('pr', 'checks', str(number), '--json', 'state')
+              # 1 and 8 mean failing or pending checks; the states decide.
+              if proc.returncode not in (0, 1, 8):
+                  return False
+              try:
+                  states = [c['state'] for c in json.loads(proc.stdout)]
+              except (ValueError, KeyError, TypeError):
+                  return False
+              return bool(states) and all(s in PASSING for s in states)
+
+
+          def main():
+              proc = gh(
+                  'pr', 'list', '--state', 'open', '--author', 'app/dependabot',
+                  '--json',
+                  'number,isDraft,mergeable,title,body,headRefName,'
+                  'headRefOid,isCrossRepository',
+              )
+              if proc.returncode != 0:
+                  sys.exit(proc.stderr)
+              failed = False
+              for pr in json.loads(proc.stdout):
+                  num = pr['number']
+                  if (pr['isDraft'] or pr['mergeable'] != 'MERGEABLE'
+                          or pr['isCrossRepository']
+                          or not pr['headRefName'].startswith('dependabot/')):
+                      continue
+                  if not releasable(pr['title'], pr['body'] or ''):
+                      print(f'#{num}: skipped, not a verified patch or minor')
+                      continue
+                  if not checks_pass(num):
+                      print(f'#{num}: skipped, checks not all passing')
+                      continue
+                  done = gh(
+                      'pr', 'merge', str(num), '--squash', '--delete-branch',
+                      '--match-head-commit', pr['headRefOid'],
+                  )
+                  if done.returncode != 0:
+                      print(f'#{num}: merge failed: {done.stderr}')
+                      failed = True
+                  else:
+                      print(f'#{num}: merged')
+              sys.exit(1 if failed else 0)
+
+
+          if __name__ == '__main__' and not os.environ.get('DAB_TEST'):
+              main()
+          PY
