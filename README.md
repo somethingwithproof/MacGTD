@@ -3,7 +3,7 @@
 [![CI](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
-macOS automation for [Getting Things Done](https://gettingthingsdone.com/) — quick-capture workflows for 8 platforms with natural language parsing, priority/due dates, contexts, and projects.
+macOS automation for [Getting Things Done](https://gettingthingsdone.com/): quick-capture workflows for 8 platforms with natural language parsing, priority/due dates, contexts, and projects.
 
 ## Workflows
 
@@ -175,9 +175,9 @@ gh workflow run e2e.yml -f test_suite=all
 
 ### Branch Naming
 
-- `feature/123-short-description` — new features
-- `fix/456-short-description` — bug fixes
-- `chore/789-short-description` — maintenance
+- `feature/123-short-description`: new features
+- `fix/456-short-description`: bug fixes
+- `chore/789-short-description`: maintenance
 
 ### Commit Convention
 
@@ -195,10 +195,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 This repo consolidates several previously separate repositories:
 
-- [MacGTD-Native](https://github.com/thomasvincent/MacGTD-Native) (archived)
-- [MacGTD-Microsoft](https://github.com/thomasvincent/MacGTD-Microsoft) (archived)
-- [MacGTD-Google](https://github.com/thomasvincent/MacGTD-Google) (archived)
-- [AlfredGTD](https://github.com/thomasvincent/AlfredGTD) (archived)
+- MacGTD-Native (archived)
+- MacGTD-Microsoft (archived)
+- MacGTD-Google (archived)
+- AlfredGTD (archived)
 
 ## License
 
