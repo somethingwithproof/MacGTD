@@ -1,5 +1,7 @@
 # Menu Bar Integration
 
+Project overview and status: [MacGTD](../../README.md).
+
 A status bar plugin showing your GTD inbox count and providing quick access to capture workflows.
 
 ## Setup
@@ -9,9 +11,11 @@ A status bar plugin showing your GTD inbox count and providing quick access to c
 1. Install SwiftBar: `brew install swiftbar`
 2. Set your plugins directory when SwiftBar first launches
 3. Symlink or copy this script:
+
    ```bash
    ln -s "$(pwd)/workflows/menubar/gtd-menubar.sh" ~/Library/Application\ Support/SwiftBar/Plugins/gtd-menubar.5m.sh
    ```
+
    The `5m` in the filename means it refreshes every 5 minutes.
 
 ### Using xbar

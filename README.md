@@ -1,6 +1,9 @@
 # MacGTD
 
-macOS automation for [Getting Things Done](https://gettingthingsdone.com/) — quick-capture workflows for 8 platforms with natural language parsing, priority/due dates, contexts, and projects.
+[![CI](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
+macOS automation for [Getting Things Done](https://gettingthingsdone.com/): quick-capture workflows for 8 platforms with natural language parsing, priority/due dates, contexts, and projects.
 
 ## Workflows
 
@@ -32,7 +35,7 @@ macOS automation for [Getting Things Done](https://gettingthingsdone.com/) — q
 
 All workflows support inline markers:
 
-```
+```text
 Buy groceries @errands +shopping !1 due:tomorrow
 ```
 
@@ -79,7 +82,7 @@ These require a one-time setup to store API credentials in macOS Keychain:
 ### Alfred Workflow
 
 1. Requires [Alfred 4+](https://www.alfredapp.com/) with Powerpack
-2. Double-click `dist/MacGTD.alfredworkflow` (from [releases](https://github.com/thomasvincent/MacGTD/releases))
+2. Double-click `dist/MacGTD.alfredworkflow` (from [releases](https://github.com/somethingwithproof/MacGTD/releases))
 3. Or copy `workflows/alfred/workflow/` contents into a new Alfred workflow
 
 **Alfred keywords:** `task`, `clip`, `gtd focus`
@@ -112,7 +115,7 @@ ln -s "$(pwd)/workflows/menubar/gtd-menubar.sh" \
 
 ## Project Structure
 
-```
+```text
 MacGTD/
 ├── workflows/
 │   ├── apple/          # Automator → Apple Reminders (5 workflows)
@@ -172,15 +175,15 @@ gh workflow run e2e.yml -f test_suite=all
 
 ### Branch Naming
 
-- `feature/123-short-description` — new features
-- `fix/456-short-description` — bug fixes
-- `chore/789-short-description` — maintenance
+- `feature/123-short-description`: new features
+- `fix/456-short-description`: bug fixes
+- `chore/789-short-description`: maintenance
 
 ### Commit Convention
 
 [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 feat(apple): add due date support to quick capture
 
 Closes #123
@@ -192,10 +195,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 This repo consolidates several previously separate repositories:
 
-- [MacGTD-Native](https://github.com/thomasvincent/MacGTD-Native) (archived)
-- [MacGTD-Microsoft](https://github.com/thomasvincent/MacGTD-Microsoft) (archived)
-- [MacGTD-Google](https://github.com/thomasvincent/MacGTD-Google) (archived)
-- [AlfredGTD](https://github.com/thomasvincent/AlfredGTD) (archived)
+- MacGTD-Native (archived)
+- MacGTD-Microsoft (archived)
+- MacGTD-Google (archived)
+- AlfredGTD (archived)
 
 ## License
 

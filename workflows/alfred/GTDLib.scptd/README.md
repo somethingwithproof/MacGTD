@@ -1,154 +1,23 @@
-# GTDLib Script Library
+# GTDLib Script Bundle
 
-GTDLib is a professional AppleScript library for Getting Things Done (GTD) task management, following Apple's best practices for script library development.
+Project overview and status: [MacGTD](../../../README.md).
 
-## Features
+This bundle contains a compiled AppleScript and a scripting dictionary for task creation, dashboard data, and focus-session operations.
 
-- **Task Management**: Create and manage tasks with contexts, priorities, and due dates
-- **Dashboard View**: Get comprehensive GTD statistics and overview
-- **Focus Mode**: Start focused work sessions with specific contexts
-- **Multiple Backend Support**: Works with Reminders, Things, and OmniFocus
-- **Error Handling**: Comprehensive error handling with user-friendly messages
-- **Security**: Input sanitization and secure coding practices
-- **Caching**: Performance optimization with intelligent caching
-- **Notifications**: System notifications for task events
-- **Logging**: Structured logging for debugging and analytics
+## Contents and interface
 
-## Installation
+- [Info.plist](Contents/Info.plist) identifies the script bundle.
+- [GTDLib.sdef](Contents/Resources/GTDLib.sdef) declares the scripting terminology.
+- [main.scpt](Contents/Resources/Scripts/main.scpt) contains the compiled implementation.
 
-Run the installation script from the project root:
+Inspect the actual implementation from macOS with:
 
 ```bash
-./install-gtdlib.sh
+osadecompile workflows/alfred/GTDLib.scptd/Contents/Resources/Scripts/main.scpt
 ```
 
-This will install GTDLib to `~/Library/Script Libraries/GTDLib.scptd`
+The decompiled script includes task creation, dashboard, focus-session, input-validation, logging, and notification handlers. It also references helper/service behavior whose availability must be verified before treating the bundle as a complete working library. Dictionary entries alone do not establish implemented handlers.
 
-## Usage
+## Integration limits
 
-### In AppleScript
-
-```applescript
-use GTDLib : script "GTDLib"
-
--- Create a task
-tell GTDLib
-    create task "Review project proposal" with context "@office" priority 1 due date (current date) + 2 * days
-end tell
-
--- Get dashboard data
-tell GTDLib
-    set dashboardInfo to get dashboard
-    -- Returns: {inbox count:5, today count:3, overdue count:1, ...}
-end tell
-
--- Start focus session
-tell GTDLib
-    start focus session "@deep-work" duration 90
-end tell
-```
-
-### Available Commands
-
-#### create task
-Creates a new task with optional parameters.
-
-```applescript
-create task "Task title" ¬
-    with context "@context" ¬
-    priority 2 ¬
-    due date (current date) + 1 * days
-```
-
-Parameters:
-- `direct parameter` (required): Task title
-- `with context` (optional): Context like "@home", "@work", etc.
-- `priority` (optional): 1=high, 2=medium, 3=low
-- `due date` (optional): Due date as AppleScript date
-
-#### get dashboard
-Returns current GTD statistics.
-
-```applescript
-set stats to get dashboard
--- Returns: {inbox count:x, today count:y, overdue count:z, ...}
-```
-
-#### start focus session
-Starts a focus mode session for a specific context.
-
-```applescript
-start focus session "@context" duration 60
-```
-
-Parameters:
-- `direct parameter` (required): Context to focus on
-- `duration` (required): Duration in minutes (1-180)
-
-## Configuration
-
-GTDLib stores preferences in `~/Library/Preferences/com.alfredgtd.plist`
-
-You can configure:
-- Default task service (reminders, things, omnifocus)
-- Default context for new tasks
-- Cache expiration times
-- Notification preferences
-
-## Error Handling
-
-GTDLib uses standard OSStatus error codes:
-- `-2001`: Invalid input
-- `-2002`: Application not found
-- `-2003`: Permission denied
-- `-2004`: Network unavailable
-- `-2005`: Data corruption
-
-## Development
-
-### Building from Source
-
-1. Edit `examples/improved_architecture/GTDLib.applescript`
-2. Compile with: `osacompile -o GTDLib.scptd/Contents/Resources/Scripts/main.scpt examples/improved_architecture/GTDLib.applescript`
-3. Run `./install-gtdlib.sh` to install
-
-### Testing
-
-```applescript
--- Test basic functionality
-use GTDLib : script "GTDLib"
-tell GTDLib
-    log version
-    create task "Test task" with context "@test"
-end tell
-```
-
-### Debugging
-
-Enable verbose logging:
-```bash
-# View logs
-log show --predicate 'subsystem == "com.alfredgtd.GTDLib"' --info
-```
-
-## Architecture
-
-GTDLib follows Apple's recommended script library structure:
-
-```
-GTDLib.scptd/
-├── Contents/
-│   ├── Info.plist              # Bundle metadata
-│   └── Resources/
-│       ├── GTDLib.sdef         # Terminology definitions
-│       └── Scripts/
-│           └── main.scpt       # Compiled script
-```
-
-## License
-
-Copyright © 2024 AlfredGTD Contributors. All rights reserved.
-
-## Support
-
-For issues and feature requests, please visit the [AlfredGTD GitHub repository](https://github.com/alfredgtd/alfredgtd).
+The previous guide referred to a root `install-gtdlib.sh` that is absent from this checkout. Installation and application-backend behavior need verification against the surrounding Alfred workflow and the user's macOS environment. No claim of complete backend compatibility, security certification, or measured caching performance is made here.

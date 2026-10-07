@@ -1,5 +1,7 @@
 # MacGTD E2E Runner Infrastructure
 
+Project overview and status: [MacGTD](../../README.md).
+
 Terraform configuration for provisioning an EC2 Mac dedicated host as a GitHub Actions self-hosted runner.
 
 ## Prerequisites
@@ -13,10 +15,13 @@ Terraform configuration for provisioning an EC2 Mac dedicated host as a GitHub A
 
 1. Copy `terraform.tfvars.example` to `terraform.tfvars` and fill in values
 2. Get a runner registration token:
+
    ```bash
    gh api repos/thomasvincent/MacGTD/actions/runners/registration-token -f | jq -r .token
    ```
+
 3. Deploy:
+
    ```bash
    terraform init
    terraform plan

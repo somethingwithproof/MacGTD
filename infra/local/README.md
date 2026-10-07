@@ -1,5 +1,7 @@
 # Local Mac Mini Runner Setup
 
+Project overview and status: [MacGTD](../../README.md).
+
 Set up a local Mac Mini as a GitHub Actions self-hosted runner for E2E testing.
 
 ## Quick Start
@@ -46,13 +48,16 @@ cd ~/actions-runner && ./config.sh remove
 ## Troubleshooting
 
 ### Runner not picking up jobs
+
 - Check labels match the workflow: `self-hosted, macOS, e2e`
 - Verify runner is online: `gh api repos/thomasvincent/MacGTD/actions/runners`
 
 ### TCC permission errors
+
 - Re-run the TCC commands with sudo
 - Check System Settings > Privacy & Security > Accessibility
 
 ### Alfred not responding to automation
+
 - Ensure Alfred is running and Powerpack is activated
 - Check Alfred > Preferences > Advanced > "Allow external triggers"
