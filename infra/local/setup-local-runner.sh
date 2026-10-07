@@ -33,7 +33,7 @@ info "macOS $SW_VERS"
 # Homebrew
 if ! command -v brew &>/dev/null; then
     warn "Homebrew not found. Installing..."
-    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    NONINTERACTIVE=1 /bin/bash -c "$(curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 info "Homebrew installed"
@@ -73,8 +73,8 @@ else
     RUNNER_ARCH="x64"
 fi
 
-RUNNER_VERSION=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | grep tag_name | cut -d'"' -f4 | sed 's/v//')
-curl -o actions-runner.tar.gz -L "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-osx-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz"
+RUNNER_VERSION=$(curl --proto '=https' --tlsv1.2 -s https://api.github.com/repos/actions/runner/releases/latest | grep tag_name | cut -d'"' -f4 | sed 's/v//')
+curl --proto '=https' --tlsv1.2 -o actions-runner.tar.gz -L "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-osx-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz"
 tar xzf actions-runner.tar.gz
 rm actions-runner.tar.gz
 
