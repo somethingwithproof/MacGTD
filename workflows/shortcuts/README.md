@@ -1,5 +1,7 @@
 # Shortcuts.app Integration
 
+Project overview and status: [MacGTD](../../README.md).
+
 A modern alternative to Automator workflows, using Apple's Shortcuts app (macOS 12+).
 
 ## Automatic Installation
@@ -71,6 +73,7 @@ Add to Siri with trigger: "Voice capture" or "Dictate task"
 ### Hands-Free Workflow
 
 For a completely hands-free experience:
+
 1. Say "Hey Siri, capture task"
 2. Siri prompts you for input
 3. Speak your task

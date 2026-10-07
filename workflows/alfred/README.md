@@ -1,5 +1,7 @@
 # Alfred GTD Workflow
 
+Project overview and status: [MacGTD](../../README.md).
+
 An Alfred workflow for GTD quick capture with natural language parsing.
 
 ## Features
@@ -14,7 +16,7 @@ An Alfred workflow for GTD quick capture with natural language parsing.
 
 ## Files
 
-```
+```text
 workflow/
 ├── info.plist                      # Alfred workflow definition
 ├── icons/icon.png                  # Workflow icon
