@@ -40,9 +40,9 @@ jobs:
           VERSION = re.compile(
               r'^v?(\d+)\.(\d+)(?:\.(\d+))?(?:\.\d+)*(?:\+[0-9A-Za-z.\-]+)?$'
           )
-          SINGLE = re.compile(r'\bbump \S+ from (\S+) to (\S+?)(?: in .*)?$')
+          SINGLE = re.compile(r'\bbump \S+ from (\S+) to (\S+?)(?: in .*)?$', re.I)
           BODY = re.compile(r'^Updates `[^`]+` from (\S+) to (\S+)', re.M)
-          COUNT = re.compile(r'\bwith (\d+) updates?\b')
+          COUNT = re.compile(r'\bwith (\d+) updates?\b', re.I)
 
 
           def small_bump(old, new):
