@@ -25,7 +25,10 @@ def require_hosted():
 
 
 def run(*args, check=True):
-    return subprocess.run(args, check=check, capture_output=True, text=True, timeout=60)
+    result = subprocess.run(args, check=False, capture_output=True, text=True, timeout=60)
+    if check and result.returncode:
+        raise RuntimeError(f"Hosted preflight {args[0]} exited {result.returncode}: {result.stderr}")
+    return result
 
 
 def grant(database, clients):
