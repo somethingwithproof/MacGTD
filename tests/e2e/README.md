@@ -64,6 +64,10 @@ MACGTD_E2E_DEDICATED=1 MACGTD_LIVE_TEST_ACCOUNTS=1 mise exec -- python tests/run
 
 Local GUI suites require an unlocked English desktop, Accessibility/Automation permissions, Reminders without an existing Inbox, and a writable Calendar. Use an account without personal tasks/events. Do not use the hosted TCC provisioning script on a personal Mac. Licensed app suites also require logged-in, activated apps and their Automation permissions. The Alfred suite supports a custom `MACGTD_ALFRED_PREFERENCES` directory and installs an isolated workflow with a unique keyword.
 
+## Verified result
+
+[Run 37857977916](https://github.com/somethingwithproof/MacGTD/actions/runs/37857977916) passed 35 validation tests on each hosted macOS version and 26 desktop E2E tests (15 native, 11 provider adapter), with zero failures, errors, or skips. It verifies the reviewed API implementation, including date-only fields, stdin credential transport, actual timeout, and transient Keychain plumbing. Live vendor and licensed-app tests remain unverified until their prerequisites are configured.
+
 ## Results
 
 `test-results/` contains JUnit XML, command logs, Automator logs, text summaries, and screenshots on desktop failure. CI uploads reports and tested build artifacts for 14 days on success or failure. The manual live workflow uploads reports without shipping credentials or Keychain contents. Missing preflight credentials produce a failed job before tests start.
