@@ -144,7 +144,7 @@ on editSetting()
 			set newValue to item 1 of newValue
 
 		else if settingKey is "notifications.enabled" or settingKey ends with ".enabled" then
-			if currentValue is "true" then
+			if currentValue is true or currentValue is "true" then
 				set defaultBtn to "Yes"
 			else
 				set defaultBtn to "No"
@@ -153,7 +153,7 @@ on editSetting()
 			set newValue to (newValue is "Yes")
 
 		else if settingKey contains "Interval" or settingKey contains "Duration" or settingKey contains "ttl" then
-			set newValue to «class ttxt» of («event sysodlog» "Enter new value for " & settingKey & " (in seconds/minutes):" given «class dtxt»:currentValue, «class appr»:"Edit Setting")
+			set newValue to «class ttxt» of («event sysodlog» "Enter new value for " & settingKey & " (in seconds/minutes):" given «class dtxt»:(currentValue as text), «class appr»:"Edit Setting")
 			try
 				set newValue to newValue as integer
 			on error
@@ -162,7 +162,7 @@ on editSetting()
 			end try
 
 		else
-			set newValue to «class ttxt» of («event sysodlog» "Enter new value for " & settingKey & ":" given «class dtxt»:currentValue, «class appr»:"Edit Setting")
+			set newValue to «class ttxt» of («event sysodlog» "Enter new value for " & settingKey & ":" given «class dtxt»:(currentValue as text), «class appr»:"Edit Setting")
 		end if
 
 		-- Validate and save

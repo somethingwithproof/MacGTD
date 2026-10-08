@@ -48,6 +48,8 @@ class Validation(unittest.TestCase):
         for obj in objects.values():
             if obj["type"] == "alfred.workflow.action.script":
                 script = obj["config"]["script"]
+                self.assertEqual(obj["config"]["scriptargtype"], 1, "Action input must use argv")
+                self.assertNotIn("{query}", script, "User text must not be interpolated into shell source")
                 paths = re.findall(r"\./scripts/[\w.-]+\.scpt", script)
                 self.assertTrue(paths, f"No packaged script target in {obj['uid']}")
                 for path in paths:

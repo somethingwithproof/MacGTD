@@ -264,8 +264,14 @@ class Native(unittest.TestCase):
         with zipfile.ZipFile(ROOT / "dist/MacGTD.alfredworkflow") as archive:
             archive.extractall(package)
         env = dict(os.environ, MACGTD_PREFERENCES_PATH=str(Path(directory.name) / "prefs.plist"))
+        import plistlib
+        info = plistlib.loads((package / "info.plist").read_bytes())
         def action(name, *args):
-            return command("osascript", package / "scripts" / (name + ".scpt"), *args, cwd=package, env=env)[0]
+            targets = [obj["config"]["script"] for obj in info["objects"]
+                       if obj["type"] == "alfred.workflow.action.script"
+                       and "./scripts/" + name + ".scpt" in obj["config"]["script"]]
+            self.assertEqual(len(targets), 1)
+            return command("bash", "-c", targets[0], "macgtd-action", *args, cwd=package, env=env)[0]
         action("add_task", self.token + " due:2030-05-20 !2")
         self.assertEqual(self.query("priority", self.token), "5")
         self.assertEqual(self.query("date", self.token), "2030-05-20")

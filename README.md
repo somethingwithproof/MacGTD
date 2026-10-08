@@ -33,7 +33,7 @@ macOS automation for [Getting Things Done](https://gettingthingsdone.com/) — q
 
 ## Task Syntax
 
-All workflows support inline markers:
+Capture workflows accept inline markers; routing and provider support vary by workflow:
 
 ```text
 Buy groceries @errands +shopping !1 due:tomorrow
@@ -108,7 +108,7 @@ ln -s "$(pwd)/workflows/menubar/gtd-menubar.sh" \
 
 ## Requirements
 
-- macOS 10.14 or later (macOS 12+ for Shortcuts/Siri)
+- Automated validation runs on macOS 15 and 26; native desktop E2E runs on macOS 15. Earlier macOS releases are not validated by CI.
 - Target app must be installed (Reminders, Things, OmniFocus, etc.)
 - Alfred 4+ with Powerpack (for Alfred workflow)
 - SwiftBar or xbar (for menu bar, optional)

@@ -42,8 +42,9 @@ The optional `alfred` suite additionally requires Alfred 5 with an activated Pow
 | Weekly review | Five real dialogs and final summary; brain-dump reminders read back |
 | Calendar | Persisted event title, date/time, duration and location |
 | Menu bar | Inbox count excluding completed tasks; refresh entry |
-| Focus | Real launchd timer registration, cross-process status, stop, and job cancellation |
+| Focus | Real launchd timer registration, cross-process status, stop/cancellation, and timed expiry |
 | GTDLib | Native task creation, priority, dashboard count, note persistence; compiled bundle loading |
+| Packaged Alfred native actions | Task due date/priority; project creation/idempotency; note body; inbox review without completion; clipboard JSON and persisted reminder |
 | Optional Alfred UI | Isolated packaged workflow import, actual keyword invocation and reminder readback |
 
 Every shipped Automator bundle is copied and compiled in an isolated directory. Native tests install uniquely named copies under `~/Library/Services`; they never overwrite an existing service. External bundle validation and fixture transport tests do not establish live provider compatibility. Shortcuts/Siri voice activation and full licensed Alfred UI coverage remain outside the hosted suite.

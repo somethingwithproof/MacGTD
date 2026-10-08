@@ -34,6 +34,12 @@ class Components(unittest.TestCase):
         value = "O'Brien \"quoted\" café\nsecond line"
         self.prefs("write", "custom.note", value)
         self.assertEqual(self.prefs("read", "custom.note"), value)
+        ratio = osa('''on run argv
+            set manager to load script POSIX file (item 1 of argv)
+            manager's writeNestedPreference("custom.ratio", 1.25)
+            return manager's readNestedPreference("custom.ratio")
+        end run''', self.compiled("preferences_manager.scpt"), env=self.env)
+        self.assertEqual(ratio, "1.25")
         self.prefs("write", "focusMode.defaultDuration", "42")
         self.assertEqual(self.prefs("read", "focusMode.defaultDuration"), "42")
         self.prefs("write", "taskServices.defaultService", "things")
@@ -159,6 +165,12 @@ class Components(unittest.TestCase):
             libraryObject's _initialize()
             if libraryObject's mappedPriority(2) is not 5 then error "Wrong priority mapping"
             if libraryObject's mappedPriority(3) is not 9 then error "Wrong priority mapping"
+            try
+                libraryObject's createTask_withContext_priority_dueDate_("", missing value, 2, missing value)
+                error "Empty task title accepted"
+            on error messageText
+                if messageText is not "Task title cannot be empty" then error messageText
+            end try
             return libraryObject's _sanitizeString(item 2 of argv)
         end run''', compiled, value)
         self.assertEqual(result, value)

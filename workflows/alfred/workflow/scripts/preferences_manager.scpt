@@ -81,6 +81,7 @@ on readNestedPreference(keyPath)
     if cursor's isKindOfClass:(current application's NSString) then return cursor as text
     if cursor's isKindOfClass:(current application's NSNumber) then
         if (cursor's objCType() as text) is "c" then return cursor as boolean
+        if (cursor's objCType() as text) is in {"f", "d"} then return cursor as real
         return cursor as integer
     end if
     if cursor's isKindOfClass:(current application's NSArray) then return cursor as list

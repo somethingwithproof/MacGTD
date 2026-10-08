@@ -152,9 +152,9 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>/usr/bin/osascript ./scripts/add_task.scpt "{query}"</string>
+				<string>/usr/bin/osascript ./scripts/add_task.scpt "$@"</string>
 				<key>scriptargtype</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>type</key>
@@ -196,9 +196,9 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>/usr/bin/osascript ./scripts/add_note.scpt "{query}"</string>
+				<string>/usr/bin/osascript ./scripts/add_note.scpt "$@"</string>
 				<key>scriptargtype</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>type</key>
@@ -240,9 +240,9 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>/usr/bin/osascript ./scripts/add_project.scpt "{query}"</string>
+				<string>/usr/bin/osascript ./scripts/add_project.scpt "$@"</string>
 				<key>scriptargtype</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>type</key>
@@ -286,7 +286,7 @@
 				<key>script</key>
 				<string>/usr/bin/osascript ./scripts/process_inbox.scpt</string>
 				<key>scriptargtype</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>type</key>
@@ -334,9 +334,9 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>/usr/bin/osascript ./scripts/clipboard_capture.scpt "{query}"</string>
+				<string>/usr/bin/osascript ./scripts/clipboard_capture.scpt "$@"</string>
 				<key>scriptargtype</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>type</key>
@@ -378,9 +378,9 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>/usr/bin/osascript ./scripts/focus_entry.scpt "{query}"</string>
+				<string>/usr/bin/osascript ./scripts/focus_entry.scpt "$@"</string>
 				<key>scriptargtype</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>type</key>
@@ -422,9 +422,9 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>/usr/bin/osascript ./scripts/focus_analytics.scpt "{query}"</string>
+				<string>/usr/bin/osascript ./scripts/focus_analytics.scpt "$@"</string>
 				<key>scriptargtype</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>type</key>
@@ -466,9 +466,9 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>/usr/bin/osascript ./scripts/preferences_editor.scpt "{query}"</string>
+				<string>/usr/bin/osascript ./scripts/preferences_editor.scpt "$@"</string>
 				<key>scriptargtype</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>type</key>
