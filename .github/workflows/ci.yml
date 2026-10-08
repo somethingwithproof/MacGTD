@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -15,62 +15,41 @@ permissions:
 
 jobs:
   validate:
-    runs-on: macos-latest
+    name: Validate (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
-
-      - name: ShellCheck
-        run: |
-          brew install shellcheck
-          shellcheck tests/*.sh scripts/*.sh
-
-      - name: Validate repository structure and workflows
-        run: |
-          chmod +x tests/validate_repo.sh
-          ./tests/validate_repo.sh
-
-      - name: AppleScript syntax validation
-        run: |
-          chmod +x tests/test_applescript_syntax.sh
-          ./tests/test_applescript_syntax.sh
-
-      - name: Automator workflow loading tests
-        run: |
-          chmod +x tests/test_automator_loading.sh
-          ./tests/test_automator_loading.sh
-
-      - name: Natural language parser unit tests
-        run: |
-          chmod +x tests/test_natural_language_parser.sh
-          ./tests/test_natural_language_parser.sh
-
-      - name: Reminders API integration tests
-        run: |
-          chmod +x tests/test_reminders_integration.sh
-          ./tests/test_reminders_integration.sh
-        continue-on-error: true  # May fail due to EventKit permissions in CI
-        
-      - name: Package Alfred workflow
-        run: |
-          chmod +x scripts/package-alfred.sh
-          ./scripts/package-alfred.sh
-
-      - name: Upload Alfred workflow artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
-          name: MacGTD.alfredworkflow
-          path: dist/MacGTD.alfredworkflow
-
-  # Optional: Local Mac testing with GUI (manual workflow_dispatch only)
-  local-e2e:
-    runs-on: macos-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
-      
-      - name: GUI E2E tests (requires manual intervention)
+          persist-credentials: false
+      - name: Install validation tools and pinned runtime
         run: |
-          echo "⚠️  GUI E2E tests require local Mac with accessibility permissions"
-          echo "Run these manually:"
-          echo "  ./tests/test_alfred_gui.sh"
-          echo "  ./tests/test_focus_mode_ui.sh"
+          brew install actionlint shellcheck mise
+          mise install
+      - name: Lint GitHub Actions and every shell script
+        run: |
+          actionlint
+          find scripts tests workflows infra -name '*.sh' -print0 | xargs -0 shellcheck
+      - name: Validate, test production parser, and verify packaged workflow
+        run: mise exec -- python tests/run.py validation
+      - name: Upload validation reports and package
+        if: always()
+        uses: actions/upload-artifact@ea054f6ae7f16e93dc7311f5ec628a73f5ab4fe0 # v4
+        with:
+          name: validation-${{ matrix.os }}
+          path: |
+            test-results/
+            dist/MacGTD.alfredworkflow
+          if-no-files-found: error
+          retention-days: 14
+
+  e2e:
+    name: Native and Alfred E2E
+    needs: validate
+    uses: ./.github/workflows/e2e.yml
+    with:
+      test_suite: automator

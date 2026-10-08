@@ -51,194 +51,215 @@
 				<key>ActionParameters</key>
 				<dict>
 					<key>source</key>
-					<string>on run {input, parameters}
-	-- Display dialog for quick capture with enhanced features
-	set taskText to ""
-	set taskTitle to "Quick Capture"
-	set taskPrompt to "Enter task (!1/!2/!3 priority, due:today/tomorrow, @context, +project):"
+					<string>-- Shared parser. Parsing handlers never create application records.
+use AppleScript version "2.4"
+use scripting additions
+use framework "Foundation"
 
-	-- Show dialog to get user input
-	display dialog taskPrompt default answer "" with title taskTitle
-	set taskText to text returned of result
+property contextPattern : "(?&lt;!\\S)@[A-Za-z0-9_-]+(?=\\s|$)"
+property projectPattern : "(?&lt;!\\S)\\+[A-Za-z0-9_-]+(?=\\s|$)"
+property priorityPattern : "(?&lt;!\\S)![1-3](?=\\s|$)"
 
-	-- Exit if the user didn't enter anything
-	if taskText is "" then
-		display notification "No text entered. Task not created." with title "GTD Quick Capture"
-		return
-	end if
-
-	-- Parse context (@context) and project (+project) before priority/due date
-	set contextMarker to my parseMarker(taskText, "@")
-	set projectMarker to my parseMarker(taskText, "+")
-
-	-- Remove markers from task text
-	if contextMarker is not "" then
-		set taskText to my replaceText(taskText, "@" &amp; contextMarker, "")
-	end if
-	if projectMarker is not "" then
-		set taskText to my replaceText(taskText, "+" &amp; projectMarker, "")
-	end if
-
-	-- Parse priority (!1 = high/1, !2 = medium/5, !3 = low/9)
-	set taskPriority to 0
-	if taskText contains "!1" then
-		set taskPriority to 1
-		set taskText to my replaceText(taskText, "!1", "")
-	else if taskText contains "!2" then
-		set taskPriority to 5
-		set taskText to my replaceText(taskText, "!2", "")
-	else if taskText contains "!3" then
-		set taskPriority to 9
-		set taskText to my replaceText(taskText, "!3", "")
-	end if
-
-	-- Parse due date
-	set dueDate to missing value
-	set today to current date
-
-	if taskText contains "due:today" then
-		set dueDate to today
-		set taskText to my replaceText(taskText, "due:today", "")
-	else if taskText contains "due:tomorrow" then
-		set dueDate to today + (1 * days)
-		set taskText to my replaceText(taskText, "due:tomorrow", "")
-	else
-		-- Try to find due:YYYY-MM-DD pattern
-		try
-			set AppleScript's text item delimiters to "due:"
-			set parts to text items of taskText
-			if (count of parts) &gt; 1 then
-				set dateStr to word 1 of item 2 of parts
-				if dateStr contains "-" then
-					set AppleScript's text item delimiters to "-"
-					set dateParts to text items of dateStr
-					if (count of dateParts) = 3 then
-						set dueDate to current date
-						set year of dueDate to (item 1 of dateParts as integer)
-						set month of dueDate to (item 2 of dateParts as integer)
-						set day of dueDate to (item 3 of dateParts as integer)
-						set hours of dueDate to 0
-						set minutes of dueDate to 0
-						set seconds of dueDate to 0
-						set taskText to my replaceText(taskText, "due:" &amp; dateStr, "")
-					end if
-				end if
-			end if
-			set AppleScript's text item delimiters to ""
-		end try
-	end if
-
-	-- Trim whitespace
-	set taskText to my trimText(taskText)
-
-	-- Determine target list (project takes precedence over context)
-	set targetList to missing value
-	set targetListName to "Inbox"
-
-	tell application "Reminders"
-		-- Make sure Reminders is running
-		launch
-
-		-- Project takes precedence
-		if projectMarker is not "" then
-			set targetListName to projectMarker
-			try
-				set targetList to list projectMarker
-			on error
-				-- Create the list if it doesn't exist
-				make new list with properties {name:projectMarker}
-				set targetList to list projectMarker
-			end try
-		else if contextMarker is not "" then
-			-- Try to find context list
-			try
-				set targetList to list contextMarker
-				set targetListName to contextMarker
-			on error
-				-- Context list doesn't exist, fall back to Inbox
-				try
-					set targetList to list "Inbox"
-				on error
-					-- Get the first list as a fallback
-					set allLists to every list
-					if (count of allLists) &gt; 0 then
-						set targetList to first item of allLists
-					end if
-				end try
-			end try
-		else
-			-- No context or project, use Inbox
-			try
-				set targetList to list "Inbox"
-			on error
-				try
-					-- Get the first list as a fallback
-					set allLists to every list
-					if (count of allLists) &gt; 0 then
-						set targetList to first item of allLists
-					end if
-				end try
-			end try
-		end if
-
-		-- Create the reminder with parsed properties
-		if targetList is not missing value then
-			tell targetList
-				set taskProps to {name:taskText}
-				if taskPriority &gt; 0 then
-					set taskProps to taskProps &amp; {priority:taskPriority}
-				end if
-				if dueDate is not missing value then
-					set taskProps to taskProps &amp; {due date:dueDate}
-				end if
-				make new reminder with properties taskProps
-			end tell
-
-			-- Notify the user with details
-			set notifyMsg to "Task added: " &amp; taskText
-			if targetListName is not "Inbox" then set notifyMsg to notifyMsg &amp; " [" &amp; targetListName &amp; "]"
-			if taskPriority &gt; 0 then set notifyMsg to notifyMsg &amp; " (priority set)"
-			if dueDate is not missing value then set notifyMsg to notifyMsg &amp; " (due date set)"
-			display notification notifyMsg with title "GTD Quick Capture"
-		else
-			-- If no suitable list was found
-			display notification "Could not find a suitable Reminders list." with title "GTD Quick Capture Error"
-		end if
-	end tell
-
-	return input
+on run {input, parameters}
+    display dialog "Enter task (!1/!2/!3 priority, due:today/tomorrow/date, @context, +project):" default answer "" with title "Quick Capture"
+    set inputText to text returned of result
+    if inputText is "" then return input
+    set taskData to my parseTaskInput(inputText)
+    if taskText of taskData is "" then return input
+    my createSmartTask(taskData)
+    return input
 end run
 
-on parseMarker(theText, prefix)
-	set foundMarker to ""
-	set words to every word of theText
-	repeat with w in words
-		if w starts with prefix then
-			set foundMarker to text 2 thru -1 of (w as text)
-			exit repeat
-		end if
-	end repeat
-	return foundMarker
-end parseMarker
+on parseTaskInput(inputText)
+    set taskData to {originalText:inputText, taskText:"", context:"", project:"", dueDate:missing value, priority:0, notes:""}
+    set marker to my findPattern(inputText, contextPattern)
+    if marker is not "" then
+        set context of taskData to marker
+        set inputText to my removePattern(inputText, marker)
+    end if
+    set marker to my findPattern(inputText, projectPattern)
+    if marker is not "" then
+        set project of taskData to text 2 thru -1 of marker
+        set inputText to my removePattern(inputText, marker)
+    end if
+    set marker to my findPattern(inputText, priorityPattern)
+    if marker is not "" then
+        set priority of taskData to text 2 of marker as integer
+        set inputText to my removePattern(inputText, marker)
+    end if
+    set dateInfo to my extractDateTime(inputText)
+    set dueDate of taskData to parsedDate of dateInfo
+    set taskText of taskData to my trimText(cleanedText of dateInfo)
+    return taskData
+end parseTaskInput
 
-on replaceText(theText, searchStr, replaceStr)
-	set AppleScript's text item delimiters to searchStr
-	set theItems to text items of theText
-	set AppleScript's text item delimiters to replaceStr
-	set theText to theItems as text
-	set AppleScript's text item delimiters to ""
-	return theText
-end replaceText
+on extractDateTime(inputText)
+    set parsedDate to missing value
+    set cleanedText to inputText
+    set weekdayNames to "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
+    set datePattern to "(?i)(?&lt;!\\S)(?:due:)?(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|today|tomorrow|next week|next (?:" &amp; weekdayNames &amp; ")|" &amp; weekdayNames &amp; ")(?=\\s|$)"
+    set dateMatch to my findPattern(inputText, datePattern)
+    if dateMatch is not "" then
+        set dateWord to ((current application's NSString's stringWithString:dateMatch)'s lowercaseString()) as text
+        if dateWord starts with "due:" then set dateWord to text 5 thru -1 of dateWord
+        set parsedDate to current date
+        set time of parsedDate to 0
+        if dateWord is "tomorrow" then
+            set parsedDate to parsedDate + days
+        else if dateWord is "next week" then
+            set parsedDate to parsedDate + 7 * days
+        else if dateWord is not "today" then
+            if dateWord contains "-" then
+                set parsedDate to my parseISODate(dateWord)
+            else
+                if dateWord starts with "next " then set dateWord to text 6 thru -1 of dateWord
+                set parsedDate to my getNextWeekday(dateWord)
+            end if
+        end if
+        set cleanedText to my removePattern(inputText, dateMatch)
+    end if
+    if my findPattern(cleanedText, "(?&lt;!\\S)due:[^\\s]+") is not "" then error "Unsupported or invalid due date"
+    -- Plain quantities are never times. Bare hours require 'at' or AM/PM.
+    set timePattern to "(?i)(?&lt;!\\S)(?:at\\s+[0-9]{1,2}(?::[0-9]{2})?(?:am|pm)?|[0-9]{1,2}:[0-9]{2}(?:am|pm)?|[0-9]{1,2}(?:am|pm))(?=\\s|$)"
+    set timeMatch to my findPattern(cleanedText, timePattern)
+    if timeMatch is not "" then
+        set timeWord to timeMatch
+        if timeWord starts with "at " then set timeWord to my trimText(text 4 thru -1 of timeWord)
+        set secondsOfDay to my parseTime(timeWord)
+        if secondsOfDay is missing value then error "Invalid time: " &amp; timeWord
+        if parsedDate is missing value then set parsedDate to current date
+        set time of parsedDate to secondsOfDay
+        set cleanedText to my removePattern(cleanedText, timeMatch)
+    end if
+    return {parsedDate:parsedDate, cleanedText:cleanedText}
+end extractDateTime
+
+on parseISODate(dateText)
+    if my findPattern(dateText, "^[0-9]{4}-[0-9]{2}-[0-9]{2}$") is "" then error "Invalid ISO date"
+    set y to text 1 thru 4 of dateText as integer
+    set m to text 6 thru 7 of dateText as integer
+    set d to text 9 thru 10 of dateText as integer
+    if y &lt; 1900 or m &lt; 1 or m &gt; 12 or d &lt; 1 or d &gt; 31 then error "Invalid ISO date"
+    set resultDate to current date
+    set day of resultDate to 1
+    set year of resultDate to y
+    set month of resultDate to m
+    set day of resultDate to d
+    set time of resultDate to 0
+    if year of resultDate is not y or (month of resultDate as integer) is not m or day of resultDate is not d then error "Invalid calendar date"
+    return resultDate
+end parseISODate
+
+on parseTime(timeStr)
+    try
+        set timeStr to ((current application's NSString's stringWithString:timeStr)'s lowercaseString()) as text
+        if my findPattern(timeStr, "^[0-9]{1,2}(:[0-9]{2})?(am|pm)?$") is "" then return missing value
+        set suffix to ""
+        if timeStr ends with "am" or timeStr ends with "pm" then
+            set suffix to text -2 thru -1 of timeStr
+            set timeStr to text 1 thru -3 of timeStr
+        end if
+        set colonPosition to offset of ":" in timeStr
+        set theMinute to 0
+        if colonPosition &gt; 0 then
+            set theHour to text 1 thru (colonPosition - 1) of timeStr as integer
+            set theMinute to text (colonPosition + 1) thru -1 of timeStr as integer
+        else
+            set theHour to timeStr as integer
+        end if
+        if theMinute &gt; 59 then return missing value
+        if suffix is not "" then
+            if theHour &lt; 1 or theHour &gt; 12 then return missing value
+            if theHour is 12 then set theHour to 0
+            if suffix is "pm" then set theHour to theHour + 12
+        else if theHour &gt; 23 then
+            return missing value
+        end if
+        return theHour * hours + theMinute * minutes
+    on error
+        return missing value
+    end try
+end parseTime
+
+on getNextWeekday(dayName)
+    set names to {"sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"}
+    set targetDay to 0
+    repeat with i from 1 to 7
+        if item i of names is dayName as text then set targetDay to i
+    end repeat
+    if targetDay is 0 then error "Invalid weekday"
+    set today to current date
+    set difference to targetDay - (weekday of today as integer)
+    if difference ≤ 0 then set difference to difference + 7
+    set resultDate to today + difference * days
+    set time of resultDate to 0
+    return resultDate
+end getNextWeekday
+
+on reminderPriority(level)
+    if level is 1 then return 1
+    if level is 2 then return 5
+    if level is 3 then return 9
+    if level is 0 then return 0
+    error "Priority must be 0, 1, 2, or 3"
+end reminderPriority
+
+on createSmartTask(taskData)
+    if taskText of taskData is "" then error "Task title cannot be empty"
+    set targetList to my getTargetList(taskData)
+    set mappedPriority to my reminderPriority(priority of taskData)
+    tell application "Reminders"
+        set r to make new reminder at end of reminders of targetList with properties {name:(taskText of taskData), priority:mappedPriority}
+        try
+            if dueDate of taskData is not missing value then set due date of r to dueDate of taskData
+            set noteText to ""
+            if context of taskData is not "" then set noteText to "Context: " &amp; context of taskData
+            if project of taskData is not "" then set noteText to noteText &amp; return &amp; "Project: " &amp; project of taskData
+            set body of r to noteText
+            return id of r
+        on error messageText number errorNumber
+            delete r
+            error messageText number errorNumber
+        end try
+    end tell
+end createSmartTask
+
+on getTargetList(taskData)
+    tell application "Reminders"
+        if project of taskData is not "" then
+            set listName to project of taskData
+            if not (exists list listName) then make new list with properties {name:listName}
+            return list listName
+        end if
+        if context of taskData is not "" then
+            set contextName to text 2 thru -1 of (context of taskData)
+            if exists list contextName then return list contextName
+            if exists list (context of taskData) then return list (context of taskData)
+        end if
+        if not (exists list "Inbox") then make new list with properties {name:"Inbox"}
+        return list "Inbox"
+    end tell
+end getTargetList
+
+on findPattern(theText, thePattern)
+    set valueString to current application's NSString's stringWithString:theText
+    set expression to current application's NSRegularExpression's regularExpressionWithPattern:thePattern options:0 |error|:(missing value)
+    if expression is missing value then error "Invalid parser expression"
+    set found to expression's firstMatchInString:valueString options:0 range:{0, valueString's |length|()}
+    if found is missing value then return ""
+    return (valueString's substringWithRange:(found's range())) as text
+end findPattern
+
+on removePattern(theText, patternText)
+    return ((current application's NSString's stringWithString:theText)'s stringByReplacingOccurrencesOfString:patternText withString:" ") as text
+end removePattern
 
 on trimText(theText)
-	repeat while theText starts with " "
-		set theText to text 2 thru -1 of theText
-	end repeat
-	repeat while theText ends with " "
-		set theText to text 1 thru -2 of theText
-	end repeat
-	return theText
-end trimText</string>
+    set valueString to current application's NSString's stringWithString:theText
+    set valueString to valueString's stringByReplacingOccurrencesOfString:"\\s+" withString:" " options:(current application's NSRegularExpressionSearch) range:{0, valueString's |length|()}
+    return (valueString's stringByTrimmingCharactersInSet:(current application's NSCharacterSet's whitespaceAndNewlineCharacterSet())) as text
+end trimText
+</string>
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>

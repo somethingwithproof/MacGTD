@@ -89,7 +89,7 @@
 			set AppleScript's text item delimiters to "due:"
 			set parts to text items of taskText
 			if (count of parts) &gt; 1 then
-				set dateStr to word 1 of item 2 of parts
+				set dateStr to my firstToken(item 2 of parts)
 				if dateStr contains "-" then
 					set deadlineValue to dateStr
 					set taskText to my replaceText(taskText, "due:" &amp; dateStr, "")
@@ -101,7 +101,7 @@
 
 	-- Parse tag (@tag)
 	set tagValue to ""
-	set words to every word of taskText
+	set words to my tokens(taskText)
 	repeat with w in words
 		if (w as text) starts with "@" then
 			set tagValue to text 2 thru -1 of (w as text)
@@ -112,7 +112,7 @@
 
 	-- Parse project (+project)
 	set projectValue to ""
-	set words to every word of taskText
+	set words to my tokens(taskText)
 	repeat with w in words
 		if (w as text) starts with "+" then
 			set projectValue to text 2 thru -1 of (w as text)
@@ -208,7 +208,23 @@ on toHex(theNum)
 		set theHex to theHex &amp; character theInt of hexChars
 	end repeat
 	return theHex
-end toHex</string>
+end toHex
+-- Parse command syntax independently of language-specific word boundaries.
+on tokens(theText)
+    set oldDelimiters to AppleScript's text item delimiters
+    set AppleScript's text item delimiters to {space, tab, return, linefeed}
+    set resultTokens to text items of theText
+    set AppleScript's text item delimiters to oldDelimiters
+    return resultTokens
+end tokens
+
+on firstToken(theText)
+    repeat with tokenValue in my tokens(theText)
+        if tokenValue as text is not "" then return tokenValue as text
+    end repeat
+    return ""
+end firstToken
+</string>
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>

@@ -1,84 +1,55 @@
 name: E2E Tests
 
 on:
+  workflow_call:
+    inputs:
+      test_suite:
+        type: string
+        default: automator
   workflow_dispatch:
     inputs:
       test_suite:
-        description: 'Test suite to run'
+        description: Test suite to run
         required: true
-        default: 'all'
+        default: automator
         type: choice
-        options:
-          - all
-          - alfred
-          - automator
+        options: [automator]
+  schedule:
+    - cron: '23 10 * * *'
 
 permissions:
   contents: read
 
 jobs:
   e2e-tests:
-    name: E2E Tests (${{ github.event.inputs.test_suite }})
-    runs-on: [self-hosted, macOS, e2e]
+    name: E2E (${{ inputs.test_suite || 'automator' }})
+    runs-on: macos-15-intel
     timeout-minutes: 30
-
+    concurrency:
+      group: macgtd-desktop-e2e
+      cancel-in-progress: false
+    env:
+      MACGTD_E2E_DEDICATED: '1'
+      TEST_SUITE: ${{ inputs.test_suite || 'automator' }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
-
-      - name: System info
-        run: |
-          echo "macOS: $(sw_vers -productVersion)"
-          echo "Arch: $(uname -m)"
-          echo "Alfred: $(ls /Applications/Alfred*.app 2>/dev/null || echo 'not found')"
-          echo "Runner: $(hostname)"
-
-      - name: Run repo validation
-        run: |
-          chmod +x tests/validate_repo.sh
-          ./tests/validate_repo.sh
-
-      - name: Run AppleScript syntax tests
-        run: |
-          chmod +x tests/test_applescript_syntax.sh
-          ./tests/test_applescript_syntax.sh
-
-      - name: Run Automator loading tests
-        run: |
-          chmod +x tests/test_automator_loading.sh
-          ./tests/test_automator_loading.sh
-
-      - name: Run NLP parser tests
-        run: |
-          chmod +x tests/test_natural_language_parser.sh
-          ./tests/test_natural_language_parser.sh
-
-      - name: Run Reminders integration tests
-        run: |
-          chmod +x tests/test_reminders_integration.sh
-          ./tests/test_reminders_integration.sh
-
-      - name: Run Alfred E2E tests
-        if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'alfred'
-        run: |
-          chmod +x tests/e2e/test_alfred_workflow.sh
-          ./tests/e2e/test_alfred_workflow.sh
-
-      - name: Run Automator install tests
-        if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'automator'
-        run: |
-          chmod +x tests/e2e/test_automator_install.sh
-          ./tests/e2e/test_automator_install.sh
-
-      - name: Package Alfred workflow
-        run: |
-          chmod +x scripts/package-alfred.sh
-          ./scripts/package-alfred.sh
-
-      - name: Upload test artifacts
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
-          name: e2e-results
+          persist-credentials: false
+      - name: Install pinned test runtime
+        run: |
+          brew install mise
+          mise install
+      - name: Provision the ephemeral macOS test desktop
+        run: mise exec -- python scripts/prepare-hosted-macos.py
+      - name: Run selected end-to-end suite
+        run: mise exec -- python tests/run.py "$TEST_SUITE"
+      - name: Upload E2E reports, logs, and tested package
+        if: always()
+        uses: actions/upload-artifact@ea054f6ae7f16e93dc7311f5ec628a73f5ab4fe0 # v4
+        with:
+          name: e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            test-results/
             dist/MacGTD.alfredworkflow
-          retention-days: 7
+          if-no-files-found: error
+          retention-days: 14

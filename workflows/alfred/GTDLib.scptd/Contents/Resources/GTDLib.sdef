@@ -29,7 +29,7 @@
         </command>
         
         <command name="process inbox" code="GTDPinbx" description="Process items in the GTD inbox">
-            <result type="integer" description="Number of items processed"/>
+            <result type="integer" description="Number of incomplete inbox items opened for human review"/>
         </command>
         
         <command name="add note" code="GTDAnote" description="Add a note to a task or project">
@@ -44,7 +44,7 @@
         </command>
         
         <!-- Record Types -->
-        <record-type name="task info" code="GTDtinfo" description="Information about a task">
+        <record-type name="task info" code="tinf" description="Information about a task">
             <property name="id" code="ID  " type="text" description="Unique identifier for the task">
                 <cocoa key="id"/>
             </property>
@@ -65,7 +65,7 @@
             </property>
         </record-type>
         
-        <record-type name="dashboard info" code="GTDdinfo" description="GTD dashboard statistics">
+        <record-type name="dashboard info" code="dinf" description="GTD dashboard statistics">
             <property name="inbox count" code="inbc" type="integer" description="Number of items in inbox">
                 <cocoa key="inboxCount"/>
             </property>
@@ -86,7 +86,7 @@
             </property>
         </record-type>
         
-        <record-type name="session info" code="GTDsinfo" description="Focus session information">
+        <record-type name="session info" code="sinf" description="Focus session information">
             <property name="session id" code="sid " type="text" description="Unique session identifier">
                 <cocoa key="sessionId"/>
             </property>
@@ -105,13 +105,13 @@
         </record-type>
         
         <!-- Enumerations -->
-        <enumeration name="task priority" code="GTDprio">
+        <enumeration name="task priority" code="prio">
             <enumerator name="high priority" code="high" description="High priority task"/>
             <enumerator name="medium priority" code="medm" description="Medium priority task"/>
             <enumerator name="low priority" code="low " description="Low priority task"/>
         </enumeration>
         
-        <enumeration name="task status" code="GTDstat">
+        <enumeration name="task status" code="stat">
             <enumerator name="pending" code="pend" description="Task is pending"/>
             <enumerator name="in progress" code="prog" description="Task is in progress"/>
             <enumerator name="completed" code="comp" description="Task is completed"/>
@@ -127,7 +127,7 @@
             <property name="default context" code="dfct" type="text" access="rw" description="Default context for new tasks">
                 <cocoa key="defaultContext"/>
             </property>
-            <property name="task service" code="tsvc" type="text" access="rw" description="Current task service (reminders, things, omnifocus)">
+            <property name="task service" code="tsvc" type="text" access="rw" description="Current task service (reminders; other services are explicitly unsupported)">
                 <cocoa key="taskService"/>
             </property>
         </class>

@@ -9,7 +9,6 @@ GITHUB_TOKEN="${github_token}"
 GITHUB_REPO="${github_repo}"
 RUNNER_NAME="${runner_name}"
 RUNNER_LABELS="${runner_labels}"
-ALFRED_LICENSE="${alfred_license}"
 
 # --- System Setup ---
 echo ">>> Setting up system..."
@@ -20,40 +19,28 @@ sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resourc
 # --- Install Homebrew ---
 echo ">>> Installing Homebrew..."
 if ! command -v brew &>/dev/null; then
-  NONINTERACTIVE=1 /bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  echo 'eval "$$(/opt/homebrew/bin/brew shellenv)"' >> /Users/ec2-user/.zprofile
-  eval "$$(/opt/homebrew/bin/brew shellenv)"
+  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  # Preserve command substitution for the future login shell, not bootstrap.
+  # shellcheck disable=SC2016
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> /Users/ec2-user/.zprofile
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
 # --- Install Alfred ---
 echo ">>> Installing Alfred..."
+brew install mise
 brew install --cask alfred
 sleep 5
 
-# --- Grant TCC Permissions ---
-echo ">>> Granting TCC permissions..."
-
-# Get the TCC database path
-TCC_DB="/Library/Application Support/com.apple.TCC/TCC.db"
-
-# Grant accessibility to Alfred
-sudo sqlite3 "$$TCC_DB" "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags) VALUES ('kTCCServiceAccessibility', 'com.runningwithcrayons.Alfred', 0, 2, 0, 1, 0);"
-
-# Grant accessibility to Terminal
-sudo sqlite3 "$$TCC_DB" "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags) VALUES ('kTCCServiceAccessibility', 'com.apple.Terminal', 0, 2, 0, 1, 0);"
-
-# Grant accessibility to osascript
-sudo sqlite3 "$$TCC_DB" "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags) VALUES ('kTCCServiceAccessibility', '/usr/bin/osascript', 1, 2, 0, 1, 0);"
-
-# Grant accessibility to GitHub Actions runner
-sudo sqlite3 "$$TCC_DB" "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags) VALUES ('kTCCServiceAccessibility', '/Users/ec2-user/actions-runner/bin/Runner.Worker', 1, 2, 0, 1, 0);"
+# Configure Accessibility and Automation through System Settings in the logged-in
+# test account. Editing TCC.db bypasses neither OS protections nor GUI provisioning.
 
 # --- Install GitHub Actions Runner ---
 echo ">>> Installing GitHub Actions runner..."
 cd /Users/ec2-user
 mkdir -p actions-runner && cd actions-runner
 
-RUNNER_VERSION=$$(curl -s https://api.github.com/repos/actions/runner/releases/latest | grep tag_name | cut -d'"' -f4 | sed 's/v//')
+RUNNER_VERSION=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | grep tag_name | cut -d'"' -f4 | sed 's/v//')
 curl -o actions-runner.tar.gz -L "https://github.com/actions/runner/releases/download/v$${RUNNER_VERSION}/actions-runner-osx-arm64-$${RUNNER_VERSION}.tar.gz"
 tar xzf actions-runner.tar.gz
 rm actions-runner.tar.gz
@@ -67,8 +54,9 @@ rm actions-runner.tar.gz
   --replace
 
 # Install as launchd service
-sudo ./svc.sh install ec2-user
-sudo ./svc.sh start
+# Desktop automation must run in ec2-user's logged-in GUI session.
+# Register normally; start ./run.sh as ec2-user after provisioning GUI permissions.
+echo "Runner configured. Log in as ec2-user and start /Users/ec2-user/actions-runner/run.sh"
 
 echo ">>> GitHub Actions runner installed and started"
 
