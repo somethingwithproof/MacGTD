@@ -1,12 +1,9 @@
 # MacGTD
 
 [![CI](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml)
-[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=somethingwithproof_MacGTD&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=somethingwithproof_MacGTD)
-[![Release](https://img.shields.io/github/v/release/somethingwithproof/MacGTD)](https://github.com/somethingwithproof/MacGTD/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/somethingwithproof/MacGTD/badge)](https://scorecard.dev/viewer/?uri=github.com/somethingwithproof/MacGTD)
 
-macOS automation for [Getting Things Done](https://gettingthingsdone.com/): quick-capture workflows for 8 platforms with natural language parsing, priority/due dates, contexts, and projects.
+macOS automation for [Getting Things Done](https://gettingthingsdone.com/) — quick-capture workflows for 8 platforms with natural language parsing, priority/due dates, contexts, and projects.
 
 ## Workflows
 
@@ -137,7 +134,7 @@ MacGTD/
 │   ├── test_automator_loading.sh
 │   ├── test_natural_language_parser.sh
 │   ├── test_reminders_integration.sh
-│   └── e2e/            # Self-hosted runner E2E tests
+│   └── e2e/            # Native macOS E2E tests
 ├── infra/
 │   ├── terraform/      # EC2 Mac dedicated host
 │   └── local/          # Local Mac Mini runner setup
@@ -145,8 +142,8 @@ MacGTD/
 │   └── package-alfred.sh
 └── .github/
     └── workflows/
-        ├── ci.yml      # Automated tests (every push)
-        └── e2e.yml     # E2E tests (self-hosted, manual)
+        ├── ci.yml      # Hosted validation + native E2E
+        └── e2e.yml     # Reusable, nightly, and manual desktop E2E
 ```
 
 ## Development
@@ -154,33 +151,27 @@ MacGTD/
 ### Running Tests
 
 ```bash
-./tests/validate_repo.sh              # Repo structure (44 checks)
-./tests/test_applescript_syntax.sh     # AppleScript compilation
-./tests/test_automator_loading.sh      # Bundle validation
-./tests/test_natural_language_parser.sh # NLP unit tests
-./tests/test_reminders_integration.sh  # Reminders API tests
+mise install
+mise exec -- python tests/run.py validation
 ```
+
+Validation compiles the AppleScript sources, tests the production parser, checks every Automator bundle and Alfred action target, and exercises preferences, focus persistence, JSON transport, and packaging. Tests produce JUnit reports and command logs under `test-results/`.
 
 ### E2E Testing
 
-Requires a self-hosted runner (EC2 Mac or local Mac Mini):
+GitHub Actions runs validation on hosted macOS 15 and 26 runners, followed by native desktop E2E on `macos-15-intel`. Pull requests, pushes to `main`, nightly runs, and manual dispatches use disposable GitHub-hosted Macs. No self-hosted runner or external credentials are required.
 
 ```bash
-# EC2 Mac
-cd infra/terraform && terraform apply
-
-# Local Mac Mini
-./infra/local/setup-local-runner.sh
-
-# Trigger E2E
-gh workflow run e2e.yml -f test_suite=all
+gh workflow run e2e.yml --ref main -f test_suite=automator
 ```
+
+Native tests operate real Automator dialogs and read back Reminders and Calendar records. They also check menu counts, the shared library, and persistent focus sessions with launchd timer cancellation. Live external integrations are deferred. Licensed Alfred UI tests can be run separately in a dedicated local account with Alfred 5 and Powerpack; they are not part of the hosted suite. See [test setup and coverage](tests/e2e/README.md).
 
 ### Branch Naming
 
-- `feature/123-short-description`: new features
-- `fix/456-short-description`: bug fixes
-- `chore/789-short-description`: maintenance
+- `feature/123-short-description` — new features
+- `fix/456-short-description` — bug fixes
+- `chore/789-short-description` — maintenance
 
 ### Commit Convention
 
@@ -198,10 +189,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 This repo consolidates several previously separate repositories:
 
-- MacGTD-Native (archived)
-- MacGTD-Microsoft (archived)
-- MacGTD-Google (archived)
-- AlfredGTD (archived)
+- [MacGTD-Native](https://github.com/thomasvincent/MacGTD-Native) (archived)
+- [MacGTD-Microsoft](https://github.com/thomasvincent/MacGTD-Microsoft) (archived)
+- [MacGTD-Google](https://github.com/thomasvincent/MacGTD-Google) (archived)
+- [AlfredGTD](https://github.com/thomasvincent/AlfredGTD) (archived)
 
 ## License
 

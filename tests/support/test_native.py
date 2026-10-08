@@ -211,6 +211,17 @@ class Native(unittest.TestCase):
         command("osascript", focus, "stop", env=env)
         self.assertEqual(command("osascript", focus, "status", env=env)[0], "No active focus session")
         self.assertNotEqual(command("launchctl", "print", service, check=False)[1], 0)
+        # A second session reaches its real launchd expiry, including timer helper execution.
+        import time
+        command("osascript", focus, context, "1", env=env)
+        expired = json.loads((Path(directory.name) / "focus-session.json").read_text())
+        deadline = time.monotonic() + 85
+        while (Path(directory.name) / "focus-session.json").exists() and time.monotonic() < deadline:
+            time.sleep(1)
+        self.assertFalse((Path(directory.name) / "focus-session.json").exists(), "Owned launchd timer did not finish")
+        events = [json.loads(line) for line in (Path(directory.name) / "focus_log.jsonl").read_text().splitlines()]
+        self.assertEqual([event["event"] for event in events], ["start", "complete", "start", "complete"])
+        self.assertEqual(events[-1]["sessionId"], expired["sessionId"])
 
     def test_library_native_task_dashboard_and_note(self):
         import tempfile
@@ -239,3 +250,51 @@ class Native(unittest.TestCase):
             tell application "Reminders" to return body of first reminder of list id (item 1 of argv)
         end run''', self.list_id)
         self.assertEqual(body, "O'Brien quoted note")
+
+    def test_packaged_alfred_native_actions(self):
+        import json
+        import os
+        import tempfile
+        import zipfile
+        from pathlib import Path
+        directory = tempfile.TemporaryDirectory(prefix="macgtd-native-alfred-actions-")
+        self.addCleanup(directory.cleanup)
+        package = Path(directory.name) / "workflow"
+        command("bash", "scripts/package-alfred.sh")
+        with zipfile.ZipFile(ROOT / "dist/MacGTD.alfredworkflow") as archive:
+            archive.extractall(package)
+        env = dict(os.environ, MACGTD_PREFERENCES_PATH=str(Path(directory.name) / "prefs.plist"))
+        def action(name, *args):
+            return command("osascript", package / "scripts" / (name + ".scpt"), *args, cwd=package, env=env)[0]
+        action("add_task", self.token + " due:2030-05-20 !2")
+        self.assertEqual(self.query("priority", self.token), "5")
+        self.assertEqual(self.query("date", self.token), "2030-05-20")
+        self.assertEqual(action("process_inbox"), "1")
+        self.assertEqual(self.query("completed", self.token), "false")
+        project = self.token + "Project"
+        self.addCleanup(osa, '''on run argv
+            tell application "Reminders"
+                if exists list (item 1 of argv) then delete list (item 1 of argv)
+            end tell
+        end run''', project)
+        project_id = action("add_project", project)
+        self.assertEqual(action("add_project", project), project_id)
+        reference = osa('''tell application "Reminders"
+            if exists list "Reference" then error "Dedicated account must start without a Reference list"
+            return id of (make new list with properties {name:"Reference"})
+        end tell''')
+        self.addCleanup(osa, '''on run argv
+            tell application "Reminders" to delete list id (item 1 of argv)
+        end run''', reference)
+        note = self.token + " O'Brien café"
+        action("add_note", note)
+        self.assertEqual(osa(REMINDERS, reference, "count", ""), "1")
+        self.assertEqual(osa('''on run argv
+            tell application "Reminders" to return body of first reminder of list id (item 1 of argv)
+        end run''', reference), note)
+        previous = command("pbpaste", strip=False, log_output=False)[0]
+        self.addCleanup(command, "pbcopy", input=previous)
+        command("pbcopy", input=self.token + "Clipboard")
+        response = json.loads(action("clipboard_capture"))
+        self.assertTrue(response["items"])
+        self.assertEqual(self.query("count"), "2")
