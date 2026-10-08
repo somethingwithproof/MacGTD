@@ -47,7 +47,9 @@ jobs:
 
           def parts(version):
               core = version.lstrip('v').split('+')[0]
-              return tuple(int(p) for p in core.split('.'))
+              nums = [int(p) for p in core.split('.')]
+              # Pad so that 1.2 and 1.2.0 compare equal.
+              return tuple(nums + [0] * (4 - len(nums)))
 
 
           def small_bump(old, new):
