@@ -45,6 +45,11 @@ jobs:
           COUNT = re.compile(r'\bwith (\d+) updates?\b', re.I)
 
 
+          def parts(version):
+              core = version.lstrip('v').split('+')[0]
+              return tuple(int(p) for p in core.split('.'))
+
+
           def small_bump(old, new):
               """True only for a semver patch or minor bump."""
               a, b = VERSION.match(old), VERSION.match(new)
@@ -55,7 +60,8 @@ jobs:
               # 0.x minor bumps may break callers, so treat them as major.
               if a.group(1) == '0' and a.group(2) != b.group(2):
                   return False
-              return True
+              # A downgrade or no-op is never an eligible update.
+              return parts(new) > parts(old)
 
 
           def releasable(title, body):
