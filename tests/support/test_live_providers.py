@@ -2,6 +2,7 @@
 import os
 from urllib.parse import quote
 import unittest
+import unicodedata
 import uuid
 
 from support.common import dedicated
@@ -44,7 +45,7 @@ class LiveProviders(unittest.TestCase):
         if provider == "notion":
             title = "".join(item.get("plain_text", item.get("text", {}).get("content", ""))
                             for item in record["properties"]["Name"]["title"])
-        self.assertEqual(title, text, "Live provider did not persist the captured title")
+        self.assertEqual(unicodedata.normalize("NFC", title), text, "Live provider did not persist the captured title")
         if provider == "notion":
             self.addCleanup(request, provider, url, "PATCH", {"in_trash": True})
         else:

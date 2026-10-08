@@ -76,6 +76,10 @@ on resolveDataSource(apiToken, selectedID)
 end resolveDataSource
 
 on validUUID(identifier)
+    -- Older setup copied compact IDs from database URLs; retain that migration path.
+    if my findPattern(identifier, "^[0-9A-Fa-f]{32}$") is not "" then
+        set identifier to text 1 thru 8 of identifier & "-" & text 9 thru 12 of identifier & "-" & text 13 thru 16 of identifier & "-" & text 17 thru 20 of identifier & "-" & text 21 thru 32 of identifier
+    end if
     set parsedUUID to current application's NSUUID's alloc()'s initWithUUIDString:identifier
     if parsedUUID is missing value then error "Notion IDs must be UUIDs; use Copy data source ID in Notion"
     return parsedUUID's UUIDString() as text
@@ -90,7 +94,13 @@ on buildPayload(taskData, targetID)
     if providerName is "todoist" then
         set payload to current application's NSMutableDictionary's dictionaryWithDictionary:(my jsonObject({"content", "priority"}, {capturedText, my todoistPriority(priorityValue)}))
         if targetID is not "" then payload's setObject:targetID forKey:"project_id"
-        if dueValue is not missing value then payload's setObject:(my isoDateTime(dueValue)) forKey:"due_datetime"
+        if dueValue is not missing value then
+            if hasDueTime of taskData then
+                payload's setObject:(my isoDateTime(dueValue)) forKey:"due_datetime"
+            else
+                payload's setObject:(my isoDate(dueValue)) forKey:"due_date"
+            end if
+        end if
         set labels to current application's NSMutableArray's array()
         if contextValue is not "" then labels's addObject:(text 2 thru -1 of contextValue)
         if projectValue is not "" then labels's addObject:projectValue
@@ -108,7 +118,7 @@ on buildPayload(taskData, targetID)
             set priorityLabel to item priorityValue of {"High", "Medium", "Low"}
             propertiesObject's setObject:(my jsonObject({"select"}, {my jsonObject({"name"}, {priorityLabel})})) forKey:"Priority"
         end if
-        if dueValue is not missing value then propertiesObject's setObject:(my jsonObject({"date"}, {my jsonObject({"start"}, {my isoDateTime(dueValue)})})) forKey:"Due"
+        if dueValue is not missing value then propertiesObject's setObject:(my jsonObject({"date"}, {my jsonObject({"start"}, {my dueText(taskData)})})) forKey:"Due"
         set parentObject to my jsonObject({"type", "data_source_id"}, {"data_source_id", targetID})
         set payload to current application's NSMutableDictionary's dictionaryWithDictionary:(my jsonObject({"parent", "properties"}, {parentObject, propertiesObject}))
         set metadataText to my metadata(taskData)
@@ -127,6 +137,7 @@ on buildPayload(taskData, targetID)
         set payload to current application's NSMutableDictionary's dictionaryWithDictionary:(my jsonObject({"title", "importance", "status"}, {capturedText, importanceValue, "notStarted"}))
         if dueValue is not missing value then
             set dateValue to my isoDateTime(dueValue)
+            if not hasDueTime of taskData then set dateValue to (my isoDate(dueValue)) & "T00:00:00Z"
             payload's setObject:(my jsonObject({"dateTime", "timeZone"}, {text 1 thru -2 of dateValue, "UTC"})) forKey:"dueDateTime"
         end if
         set metadataText to my metadata(taskData)
@@ -137,7 +148,7 @@ on buildPayload(taskData, targetID)
         -- Keep is a note service: retain task metadata as text, never invent task fields.
         set noteText to my metadata(taskData)
         if priorityValue > 0 then set noteText to noteText & "Priority: " & priorityValue & linefeed
-        if dueValue is not missing value then set noteText to noteText & "Due: " & (my isoDateTime(dueValue)) & linefeed
+        if dueValue is not missing value then set noteText to noteText & "Due: " & (my dueText(taskData)) & linefeed
         if noteText is "" then set noteText to capturedText
         set textObject to my jsonObject({"text"}, {noteText})
         return my jsonObject({"title", "body"}, {capturedText, my jsonObject({"text"}, {textObject})})
@@ -161,6 +172,16 @@ on todoistPriority(priorityValue)
     return 5 - priorityValue
 end todoistPriority
 
+on dueText(taskData)
+    if hasDueTime of taskData then return my isoDateTime(dueDate of taskData)
+    return my isoDate(dueDate of taskData)
+end dueText
+
+on isoDate(dateValue)
+    -- Read calendar components directly so a date-only marker never shifts in UTC.
+    return (year of dateValue as text) & "-" & text -2 thru -1 of ("0" & (month of dateValue as integer)) & "-" & text -2 thru -1 of ("0" & day of dateValue)
+end isoDate
+
 on isoDateTime(dateValue)
     set formatter to current application's NSDateFormatter's alloc()'s init()
     formatter's setLocale:(current application's NSLocale's localeWithLocaleIdentifier:"en_US_POSIX")
@@ -175,10 +196,11 @@ on captureURL(targetID)
     if providerName is "google" then return "https://keep.googleapis.com/v1/notes"
     if providerName is "microsoft" then
         if targetID is "" then error "Configure a Microsoft To Do list ID"
+        if targetID is "." or targetID is ".." then error "Invalid Microsoft To Do list ID"
+        set allowedCharacters to current application's NSCharacterSet's characterSetWithCharactersInString:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
+        set encodedTarget to (current application's NSString's stringWithString:targetID)'s stringByAddingPercentEncodingWithAllowedCharacters:allowedCharacters
         set component to current application's NSURLComponents's componentsWithString:"https://graph.microsoft.com"
-        component's setPath:("/v1.0/me/todo/lists/" & targetID & "/tasks")
-        -- Reject path separators; a target is one opaque list identifier.
-        if targetID contains "/" or targetID contains "?" or targetID contains "#" then error "Invalid Microsoft To Do list ID"
+        component's setPercentEncodedPath:("/v1.0/me/todo/lists/" & (encodedTarget as text) & "/tasks")
         return component's |URL|()'s absoluteString() as text
     end if
     error "Unsupported API provider"
@@ -190,10 +212,34 @@ end requestPayload
 
 on requestAPI(apiToken, methodName, requestURL, jsonBody)
     if apiToken contains return or apiToken contains linefeed then error "Invalid credential characters"
-    set curlCmd to quoted form of curlExecutable & " --fail-with-body --silent --show-error --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 -X " & quoted form of methodName & " " & quoted form of requestURL & " -H " & quoted form of ("Authorization: Bearer " & apiToken) & " -H 'Content-Type: application/json'"
-    if providerName is "notion" then set curlCmd to curlCmd & " -H " & quoted form of ("Notion-Version: " & notionApiVersion)
-    if methodName is "POST" then set curlCmd to curlCmd & " --data-binary " & quoted form of jsonBody
-    return do shell script curlCmd
+    set argumentValues to current application's NSMutableArray's arrayWithArray:{"--fail-with-body", "--silent", "--show-error", "--proto", "=https", "--proto-redir", "=https", "--tlsv1.2", "--connect-timeout", "10", "--max-time", "30", "-X", methodName, requestURL, "-H", "@-", "-H", "Content-Type: application/json"}
+    if providerName is "notion" then
+        argumentValues's addObject:"-H"
+        argumentValues's addObject:("Notion-Version: " & notionApiVersion)
+    end if
+    if methodName is "POST" then
+        argumentValues's addObject:"--data-binary"
+        argumentValues's addObject:jsonBody
+    end if
+    set curlTask to current application's NSTask's alloc()'s init()
+    curlTask's setLaunchPath:curlExecutable
+    curlTask's setArguments:argumentValues
+    set inputPipe to current application's NSPipe's pipe()
+    set outputPipe to current application's NSPipe's pipe()
+    curlTask's setStandardInput:inputPipe
+    curlTask's setStandardOutput:outputPipe
+    -- One drained pipe prevents stdout/stderr backpressure deadlocks.
+    curlTask's setStandardError:outputPipe
+    if not (curlTask's launchAndReturnError:(missing value)) then error "Could not launch capture transport"
+    set authorizationHeader to current application's NSString's stringWithString:("Authorization: Bearer " & apiToken & linefeed)
+    (inputPipe's fileHandleForWriting())'s writeData:(authorizationHeader's dataUsingEncoding:(current application's NSUTF8StringEncoding))
+    (inputPipe's fileHandleForWriting())'s closeFile()
+    set responseData to (outputPipe's fileHandleForReading())'s readDataToEndOfFile()
+    curlTask's waitUntilExit()
+    set responseText to (current application's NSString's alloc()'s initWithData:responseData encoding:(current application's NSUTF8StringEncoding))
+    if responseText is missing value then error "Provider response is not UTF-8 text"
+    if curlTask's terminationStatus() is not 0 then error "Transport failed (" & (curlTask's terminationStatus() as text) & "): " & (responseText as text)
+    return responseText as text
 end requestAPI
 
 on serializeJSON(values)
@@ -218,6 +264,12 @@ on confirmedResponse(responseText)
             set recordName to responseObject's objectForKey:"name"
             if recordName is missing value then return false
             if not (recordName's isKindOfClass:(current application's NSString)) then return false
+            set titleObject to responseObject's objectForKey:"title"
+            if titleObject is missing value then return false
+            if not (titleObject's isKindOfClass:(current application's NSString)) then return false
+            set bodyObject to responseObject's objectForKey:"body"
+            if bodyObject is missing value then return false
+            if not (bodyObject's isKindOfClass:(current application's NSDictionary)) then return false
             return (recordName as text) starts with "notes/" and (length of (recordName as text)) > 6
         end if
         set identifier to responseObject's objectForKey:"id"
@@ -251,7 +303,7 @@ property projectPattern : "(?<!\\S)\\+[A-Za-z0-9_-]+(?=\\s|$)"
 property priorityPattern : "(?<!\\S)![1-3](?=\\s|$)"
 
 on parseTaskInput(inputText)
-    set taskData to {originalText:inputText, taskText:"", context:"", project:"", dueDate:missing value, priority:0, notes:""}
+    set taskData to {originalText:inputText, taskText:"", context:"", project:"", dueDate:missing value, hasDueTime:false, priority:0, notes:""}
     set marker to my findPattern(inputText, contextPattern)
     if marker is not "" then
         set context of taskData to marker
@@ -269,6 +321,7 @@ on parseTaskInput(inputText)
     end if
     set dateInfo to my extractDateTime(inputText)
     set dueDate of taskData to parsedDate of dateInfo
+    set hasDueTime of taskData to hasExplicitTime of dateInfo
     set taskText of taskData to my trimText(cleanedText of dateInfo)
     return taskData
 end parseTaskInput
@@ -311,7 +364,7 @@ on extractDateTime(inputText)
         set time of parsedDate to secondsOfDay
         set cleanedText to my removePattern(cleanedText, timeMatch)
     end if
-    return {parsedDate:parsedDate, cleanedText:cleanedText}
+    return {parsedDate:parsedDate, cleanedText:cleanedText, hasExplicitTime:(timeMatch is not "")}
 end extractDateTime
 
 on parseISODate(dateText)

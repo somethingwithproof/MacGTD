@@ -1,6 +1,6 @@
 # API capture adapters
 
-Standalone Automator bundles use the shared [provider adapter](provider-capture.applescript) and the production task parser. Generated copies are checked for drift in validation. Captures serialize explicit JSON keys, enforce HTTPS, use bounded requests, reject unconfirmed creation, and redact the configured token from errors.
+Standalone Automator bundles use the shared [provider adapter](provider-capture.applescript) and the production task parser. Generated copies are checked for drift in validation. Captures serialize explicit JSON keys, enforce HTTPS, use bounded requests with authorization headers sent through stdin, reject unconfirmed creation, and redact the configured token from errors.
 
 | Provider | Current interface | Configuration |
 | --- | --- | --- |
@@ -37,7 +37,7 @@ Microsoft and Google access tokens expire. Obtain and renew them through your OA
 
 ## Migration and field mapping
 
-- **Todoist:** both Automator and Alfred use API v1 directly. The external `todoist` CLI is no longer required. Priorities map `!1/!2/!3` to API priorities `4/3/2`; no marker maps to `1`. A configured project ID controls destination; `@context` and `+project` become labels. Due times are UTC ISO timestamps.
+- **Todoist:** both Automator and Alfred use API v1 directly. The external `todoist` CLI is no longer required. Priorities map `!1/!2/!3` to API priorities `4/3/2`; no marker maps to `1`. A configured project ID controls destination; `@context` and `+project` become labels. Date-only inputs use `due_date`; explicit times use UTC ISO timestamps.
 - **Notion:** copy the data source ID from **Manage data sources**. Existing `database-id` Keychain entries still work when discovery returns exactly one source. Multi-source databases require explicit selection and never default to the first source. The source needs `Name` (title), `Status` (select, including Inbox), `Priority` (select, High/Medium/Low), and `Due` (date). Context/project metadata is retained in paragraph blocks.
 - **Microsoft:** browser `quickAdd` and simulated keystrokes are replaced by Graph task creation. Configure a list ID and delegated token. Priorities map to high/normal/low; contexts/projects become body text; due dates use Graph's `dateTimeTimeZone` shape in UTC.
 - **Google:** the undocumented `#create/` browser path is replaced by Keep note creation. The account must be eligible for the API. Keep is a note service, so priorities, due dates, contexts, and projects are retained as note text rather than unsupported task fields.
@@ -53,7 +53,7 @@ mise exec -- python tests/run.py validation
 MACGTD_E2E_DEDICATED=1 mise exec -- python tests/run.py providers
 ```
 
-Validation compiles adapters and tests real HTTPS transport against a local TLS fixture. Hosted desktop E2E also operates all four production capture dialogs against that fixture, checks persisted fields, verifies returned IDs, and covers blank input, cancellation, authentication/rate-limit errors, unconfirmed responses, and Notion data-source ambiguity. Synthetic fixture credentials never reach vendors. These tests establish adapter behavior, not live vendor compatibility.
+Validation compiles adapters and tests real HTTPS transport against a local TLS fixture. Hosted desktop E2E also operates all four production capture dialogs against that fixture, checks persisted fields, verifies returned IDs, and covers blank input, cancellation, actual network timeouts, authentication/rate-limit errors, unconfirmed responses, and Notion data-source ambiguity. Synthetic fixture credentials never reach vendors. These tests establish adapter behavior, not live vendor compatibility.
 
 The manual [live provider workflow](../../.github/workflows/live-e2e.yml) runs all four real vendor paths on a disposable GitHub-hosted Mac. Configure the variables above as GitHub secrets in the `provider-e2e` environment (or repository secrets). A dedicated Todoist project ID is mandatory for live tests. Confirm dedicated test accounts when dispatching. Missing credentials fail preflight; tests never silently skip. Readback verifies uniquely named captured records before cleanup; Notion cleanup uses `in_trash: true` for the current API.
 

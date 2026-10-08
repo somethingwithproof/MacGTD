@@ -23,7 +23,8 @@ def embedded(provider):
               "targetEnvironment": target, "targetAccount": account}
     for name, value in values.items():
         adapter, count = re.subn(r'^property ' + name + r' : ".*"$',
-                                 lambda _: f'property {name} : "{value}"', adapter, flags=re.MULTILINE)
+                                 lambda _, property_name=name, property_value=value: f'property {property_name} : "{property_value}"',
+                                 adapter, flags=re.MULTILINE)
         if count != 1:
             raise ValueError(f"Expected exactly one {name} property")
     parser = (ROOT / "workflows/alfred/workflow/scripts/natural_language_task.scpt").read_text(encoding="utf-8")

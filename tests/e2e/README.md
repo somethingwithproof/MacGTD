@@ -12,9 +12,10 @@ Tests use the Python version pinned in `.mise.toml`, real shipped AppleScript, b
 | `live` | Manual hosted Mac with dedicated provider secrets | Actual production dialogs, real vendor record readback, and owned-record cleanup for all four API providers |
 | `alfred` | Dedicated local account with Alfred 5 + Powerpack | Isolated workflow import and real Alfred keyword invocation with Reminders readback |
 | `desktop-integrations` | Dedicated local account with licensed Things 3, OmniFocus 4, and Alfred 5 + Powerpack | Real app capture/readback and Alfred UI |
-| `all` | Fully configured dedicated local Mac | Native, provider fixture, live API, licensed app, and Alfred UI E2E suites; every prerequisite is mandatory |
+| `all` | Dedicated local Mac with Alfred + Powerpack | Native, provider fixture, and Alfred UI suites; retains existing suite prerequisites |
+| `all --live` | Fully configured dedicated local Mac | Every E2E suite, including live APIs and licensed Things/OmniFocus; missing prerequisites fail |
 
-The fixture exercises real `/usr/bin/curl` HTTPS with a locally trusted certificate. Only a temporary copy of a workflow's transport executable and synthetic configuration are substituted. The production parser, payload construction, current API paths/versions, confirmation checks, and error handlers run unchanged. It verifies captured title, priority, dates, metadata, returned IDs, and persisted records. Authentication, rate-limit, invalid-confirmation, blank/cancel, legacy Notion discovery, and ambiguous-source cases are covered.
+The fixture exercises real `/usr/bin/curl` HTTPS with a locally trusted certificate. Only a temporary copy of a workflow's transport executable and synthetic configuration are substituted. The production parser, payload construction, current API paths/versions, confirmation checks, and error handlers run unchanged. Captured Unicode is compared using canonical equivalence across AppleScript text boundaries. It verifies captured title, priority, dates, metadata, returned IDs, and persisted records. Authentication, rate-limit, invalid-confirmation, actual transport timeout, blank/cancel, legacy Notion discovery, and ambiguous-source cases are covered.
 
 **Fixture success is not evidence of live vendor compatibility.** Live cloud and licensed-app runs require accounts and applications that are not present on an ordinary hosted runner. Shortcuts/Siri voice activation remains outside automated coverage.
 

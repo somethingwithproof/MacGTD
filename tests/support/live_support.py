@@ -8,7 +8,6 @@ import re
 import shutil
 import tempfile
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
 import urllib.request
 import uuid
 
@@ -20,6 +19,20 @@ REQUIRED = {
     "microsoft": ("MACGTD_MICROSOFT_TOKEN", "MACGTD_MICROSOFT_LIST_ID"),
     "google": ("MACGTD_GOOGLE_TOKEN",),
 }
+
+
+def write_credential(service, account, value):
+    def quoted(part):
+        if any(character in part for character in "\r\n\0"):
+            raise AssertionError("Keychain configuration must not contain control characters")
+        return '"' + part.replace('\\', '\\\\').replace('"', '\\"') + '"'
+    parts = ["add-generic-password", "-s", quoted(service), "-a", quoted(account),
+             "-w", quoted(value), "-T", '"/usr/bin/security"']
+    command("security", "-i", input=" ".join(parts) + "\n", log_output=False)
+    stored, _ = command("security", "find-generic-password", "-s", service, "-a", account,
+                        "-w", strip=False, log_output=False)
+    if stored.removesuffix("\n") != value:
+        raise AssertionError("Transient Keychain write verification failed")
 
 
 def identifier_from_output(output):
@@ -66,9 +79,8 @@ def credential_bundle(provider):
         target = Path(shutil.copytree(source, os.path.join(directory, source.name)))
         try:
             for name, account in zip(names, accounts):
-                command("security", "add-generic-password", "-s", service, "-a", account,
-                        "-w", os.environ[name], "-T", "/usr/bin/security", log_output=False)
                 stored.append(account)
+                write_credential(service, account, os.environ[name])
             document = target / "Contents/document.wflow"
             data = plistlib.loads(document.read_bytes())
             parameters = data["actions"][0]["action"]["ActionParameters"]
@@ -82,4 +94,7 @@ def credential_bundle(provider):
             yield target
         finally:
             for account in stored:
-                command("security", "delete-generic-password", "-s", service, "-a", account, log_output=False)
+                _, status = command("security", "delete-generic-password", "-s", service, "-a", account,
+                                    log_output=False, check=False)
+                if status not in (0, 44):
+                    raise AssertionError("Failed to remove transient live-test credential")

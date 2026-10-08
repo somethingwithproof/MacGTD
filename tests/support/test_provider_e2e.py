@@ -2,17 +2,17 @@
 
 This is deterministic adapter E2E, not evidence of live vendor compatibility.
 """
-from datetime import datetime, timezone
 import os
-from pathlib import Path
 import plistlib
+import time
 import unittest
+import unicodedata
 from unittest.mock import patch
 import zipfile
 
 from support.common import ROOT, command, dedicated
 from support.gui import workflow
-from support.live_support import identifier_from_output
+from support.live_support import credential_bundle, identifier_from_output
 from support.provider_fixture import Fixture, PROVIDERS
 
 
@@ -43,24 +43,26 @@ class ProviderE2E(unittest.TestCase):
     def test_todoist_dialog_https_and_task_readback(self):
         self.capture("todoist", 'O\'Brien "quoted" café !1 due:2030-05-20 @work +launch')
         record = self.persisted()
-        self.assertEqual(record["content"], 'O\'Brien "quoted" café')
+        self.assertEqual(unicodedata.normalize("NFC", record["content"]), 'O\'Brien "quoted" café')
         self.assertEqual(record["priority"], 4)
         self.assertEqual(record["project_id"], "fixture-project")
         self.assertEqual(record["labels"], ["work", "launch"])
-        self.assertEqual(datetime.fromisoformat(record["due_datetime"]).astimezone().date().isoformat(), "2030-05-20")
+        self.assertEqual(record["due_date"], "2030-05-20")
+        self.assertNotIn("due_datetime", record)
 
     def test_notion_dialog_current_version_and_data_source_readback(self):
         self.capture("notion", 'O\'Brien "quoted" café !2 due:2030-05-20')
         record = self.persisted()
-        self.assertEqual(record["properties"]["Name"]["title"][0]["text"]["content"], 'O\'Brien "quoted" café')
+        self.assertEqual(unicodedata.normalize("NFC", record["properties"]["Name"]["title"][0]["text"]["content"]), 'O\'Brien "quoted" café')
         self.assertEqual(record["properties"]["Priority"]["select"]["name"], "Medium")
         self.assertEqual(record["properties"]["Status"]["select"]["name"], "Inbox")
+        self.assertEqual(record["properties"]["Due"]["date"]["start"], "2030-05-20")
         self.assertEqual(self.fixture.requests[0][2], "2026-03-11")
 
     def test_microsoft_dialog_graph_v1_task_readback(self):
         self.capture("microsoft", 'O\'Brien "quoted" café !3 due:2030-05-20 @work')
         record = self.persisted()
-        self.assertEqual(record["title"], 'O\'Brien "quoted" café')
+        self.assertEqual(unicodedata.normalize("NFC", record["title"]), 'O\'Brien "quoted" café')
         self.assertEqual(record["importance"], "low")
         self.assertEqual(record["status"], "notStarted")
         self.assertEqual(record["dueDateTime"]["timeZone"], "UTC")
@@ -69,10 +71,11 @@ class ProviderE2E(unittest.TestCase):
     def test_google_dialog_keep_v1_note_readback(self):
         self.capture("google", 'O\'Brien "quoted" café !1 due:2030-05-20 @work +launch')
         record = self.persisted()
-        self.assertEqual(record["title"], 'O\'Brien "quoted" café')
+        self.assertEqual(unicodedata.normalize("NFC", record["title"]), 'O\'Brien "quoted" café')
         self.assertIn("Priority: 1\n", record["body"]["text"]["text"])
         self.assertIn("Context: @work\n", record["body"]["text"]["text"])
         self.assertIn("Project: launch\n", record["body"]["text"]["text"])
+        self.assertIn("Due: 2030-05-20\n", record["body"]["text"]["text"])
         self.assertTrue(record["name"].startswith("notes/"))
 
     def test_every_provider_blank_and_cancel_have_no_side_effects(self):
@@ -106,6 +109,14 @@ class ProviderE2E(unittest.TestCase):
         self.assertEqual(self.fixture.records, {})
         self.assertEqual(self.fixture.requests, [])
 
+    def test_dialog_capture_timeout_is_blocking(self):
+        self.fixture.scenario = "timeout"
+        started = time.monotonic()
+        with self.assertRaisesRegex(AssertionError, "Automator failed"):
+            self.capture("todoist", "Slow provider must fail")
+        self.assertLess(time.monotonic() - started, 50)
+        self.assertEqual(self.fixture.records, {})
+
     def test_packaged_alfred_todoist_uses_current_api(self):
         command("bash", ROOT / "scripts/package-alfred.sh")
         package = self.fixture.path / "alfred"
@@ -123,5 +134,19 @@ class ProviderE2E(unittest.TestCase):
                             cwd=package, env=env)
         record = self.persisted()
         self.assertEqual(output, record["id"])
-        self.assertEqual(record["content"], "Packaged Todoist café")
+        self.assertEqual(unicodedata.normalize("NFC", record["content"]), "Packaged Todoist café")
         self.assertEqual(record["priority"], 3)
+
+    def test_transient_keychain_credentials_reach_real_automator(self):
+        with credential_bundle("todoist") as bundle:
+            document = bundle / "Contents/document.wflow"
+            data = plistlib.loads(document.read_bytes())
+            parameters = data["actions"][0]["action"]["ActionParameters"]
+            parameters["source"] = parameters["source"].replace(
+                'property curlExecutable : "/usr/bin/curl"', f'property curlExecutable : "{self.fixture.curl}"')
+            document.write_bytes(plistlib.dumps(data, sort_keys=False))
+            output = workflow(bundle, [{"text": "Transient Keychain capture",
+                                        "expected": "Todoist GTD Quick Capture"}])
+        record = self.persisted()
+        self.assertEqual(identifier_from_output(output), record["id"])
+        self.assertEqual(record["project_id"], "fixture-project")

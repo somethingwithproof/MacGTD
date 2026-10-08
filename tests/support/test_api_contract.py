@@ -2,8 +2,9 @@
 import json
 import os
 import plistlib
+import time
 import unittest
-from unittest.mock import patch
+import unicodedata
 
 from support.common import ROOT, command, osa
 from support.provider_fixture import Fixture, PROVIDERS, SOURCE_ID
@@ -41,14 +42,15 @@ class APIContract(unittest.TestCase):
                 if provider == "notion":
                     self.assertEqual(record["parent"]["data_source_id"], SOURCE_ID)
                     self.assertEqual(self.fixture.requests[-1][2], "2026-03-11")
-                    self.assertEqual(record["properties"]["Name"]["title"][0]["text"]["content"], "Fixture café")
+                    self.assertEqual(unicodedata.normalize("NFC", record["properties"]["Name"]["title"][0]["text"]["content"]), "Fixture café")
                     self.assertEqual(record["properties"]["Priority"]["select"]["name"], "High")
                     self.assertEqual(record["properties"]["Status"]["select"]["name"], "Inbox")
+                    self.assertEqual(record["children"][0]["paragraph"]["rich_text"][0]["text"]["content"], "Context: @work\n")
                 if provider == "todoist":
                     self.assertEqual(record["priority"], 4)
-                    self.assertEqual(record["content"], "Fixture café")
+                    self.assertEqual(unicodedata.normalize("NFC", record["content"]), "Fixture café")
                 if provider in ("microsoft", "google"):
-                    self.assertEqual(record["title"], "Fixture café")
+                    self.assertEqual(unicodedata.normalize("NFC", record["title"]), "Fixture café")
         self.assertEqual(self.fixture.records, {})
 
     def test_api_failures_are_blocking_and_redact_credentials(self):
@@ -65,6 +67,7 @@ class APIContract(unittest.TestCase):
 
     def test_notion_legacy_discovery_requires_unambiguous_source(self):
         self.env["MACGTD_NOTION_DATA_SOURCE_ID"] = ""
+        self.env["MACGTD_NOTION_DATABASE_ID"] = self.env["MACGTD_NOTION_DATABASE_ID"].replace("-", "")
         record = self.capture("notion")
         self.assertEqual(record["parent"]["data_source_id"], SOURCE_ID)
         self.fixture.scenario = "multiple-sources"
@@ -85,11 +88,40 @@ class APIContract(unittest.TestCase):
                     self.capture(provider)
         self.assertEqual(self.fixture.records, {})
 
-    def test_notion_invalid_source_and_microsoft_path_injection_are_rejected(self):
+    def test_notion_invalid_source_and_microsoft_opaque_id_encoding(self):
         self.env["MACGTD_NOTION_DATA_SOURCE_ID"] = "not-an-id"
         with self.assertRaisesRegex(AssertionError, "UUID"):
             self.capture("notion")
-        self.env["MACGTD_MICROSOFT_LIST_ID"] = "fixture-list/other"
-        with self.assertRaisesRegex(AssertionError, "Invalid Microsoft To Do list ID"):
-            self.capture("microsoft")
+        value = osa('''on run argv
+            set adapter to load script POSIX file (item 1 of argv)
+            return adapter's captureURL("fixture-list/other?query#fragment")
+        end run''', self.compiled["microsoft"])
+        self.assertEqual(value, "https://graph.microsoft.com/v1.0/me/todo/lists/fixture-list%2Fother%3Fquery%23fragment/tasks")
         self.assertEqual(self.fixture.requests, [])
+
+    def test_transport_timeout_is_bounded_and_does_not_confirm_creation(self):
+        self.fixture.scenario = "timeout"
+        started = time.monotonic()
+        with self.assertRaisesRegex(AssertionError, "28|timed out"):
+            self.capture("todoist")
+        self.assertLess(time.monotonic() - started, 40)
+        self.assertEqual(self.fixture.records, {})
+
+    def test_date_only_due_fields_and_explicit_times_are_distinct(self):
+        for provider in PROVIDERS:
+            with self.subTest(provider=provider):
+                record = self.capture(provider, "Calendar date due:2030-05-20")
+                timed = self.capture(provider, "Explicit time due:2030-05-20 at 3pm")
+                if provider == "todoist":
+                    self.assertEqual(record["due_date"], "2030-05-20")
+                    self.assertNotIn("due_datetime", record)
+                    self.assertNotIn("due_date", timed)
+                    self.assertTrue(timed["due_datetime"].endswith("Z"))
+                elif provider == "notion":
+                    self.assertEqual(record["properties"]["Due"]["date"]["start"], "2030-05-20")
+                    self.assertIn("T", timed["properties"]["Due"]["date"]["start"])
+                elif provider == "google":
+                    self.assertEqual(record["body"]["text"]["text"], "Due: 2030-05-20\n")
+                    self.assertIn("T", timed["body"]["text"]["text"])
+                else:
+                    self.assertEqual(record["dueDateTime"]["dateTime"], "2030-05-20T00:00:00")

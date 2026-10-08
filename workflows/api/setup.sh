@@ -40,9 +40,20 @@ if [[ -n "$target_account" ]]; then
     read -rp "$target_account: " capture_target
     [[ -n "$capture_target" ]] || { echo "A target ID is required" >&2; exit 1; }
 fi
-security add-generic-password -s "$service" -a "api-token" -w "$capture_token" -U
+escape_security_value() {
+    local value="$1"
+    value=${value//\\/\\\\}
+    value=${value//\"/\\\"}
+    builtin printf '%s' "$value"
+}
+# security's interactive parser reads the secret from stdin, not process argv.
+escaped_token=$(escape_security_value "$capture_token")
+builtin printf 'add-generic-password -s "%s" -a "api-token" -w "%s" -U\n' \
+    "$service" "$escaped_token" | security -i
+stored_token=$(security find-generic-password -s "$service" -a "api-token" -w)
+[[ "$stored_token" == "$capture_token" ]] || { echo "Keychain write verification failed" >&2; exit 1; }
 if [[ -n "$target_account" ]]; then
     security add-generic-password -s "$service" -a "$target_account" -w "$capture_target" -U
 fi
-unset capture_token capture_target
+unset capture_token capture_target escaped_token stored_token
 echo "Configuration stored in macOS Keychain. See workflows/api/README.md."

@@ -10,7 +10,7 @@ import ssl
 import sys
 import tempfile
 import threading
-from urllib.parse import urlparse
+import time
 import urllib.request
 import uuid
 
@@ -72,6 +72,13 @@ class Fixture:
             def do_POST(self):
                 payload = json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))))
                 fixture.requests.append((self.path, payload, self.headers.get("Notion-Version")))
+                if fixture.scenario == "timeout":
+                    time.sleep(35)
+                    try:
+                        self.respond(408, {"error": "fixture_timeout"})
+                    except (BrokenPipeError, ConnectionResetError, ssl.SSLError):
+                        pass
+                    return
                 if self.headers.get("Authorization") != "Bearer fixture-token":
                     return self.respond(401, {"error": "invalid synthetic token"})
                 if fixture.scenario == "auth-failure":
