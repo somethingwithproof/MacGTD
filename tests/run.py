@@ -54,17 +54,23 @@ class Report(unittest.TextTestResult):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("suite", choices=("validation", "all", "alfred", "automator"))
+    parser.add_argument("suite", choices=("validation", "all", "alfred", "automator", "providers", "live", "desktop-integrations"))
     parser.add_argument("--filter", help="Run tests whose IDs contain this text")
     args = parser.parse_args()
     os.chdir(ROOT)
     results = ROOT / "test-results"
     results.mkdir(exist_ok=True)
-    modules = ["support.test_harness", "support.test_validation", "support.test_components"] if args.suite == "validation" else []
+    modules = ["support.test_harness", "support.test_validation", "support.test_components", "support.test_api_contract", "support.test_live_support"] if args.suite == "validation" else []
     if args.suite in ("all", "automator"):
         modules += ["support.test_native"]
-    if args.suite in ("all", "alfred"):
+    if args.suite in ("all", "alfred", "desktop-integrations"):
         modules += ["support.test_alfred"]
+    if args.suite in ("all", "automator", "providers"):
+        modules += ["support.test_provider_e2e"]
+    if args.suite in ("all", "live"):
+        modules += ["support.test_live_providers"]
+    if args.suite in ("all", "desktop-integrations"):
+        modules += ["support.test_desktop_integrations"]
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromName(m) for m in modules)
     if args.filter:
         def flatten(items):

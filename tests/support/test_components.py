@@ -167,7 +167,7 @@ class Components(unittest.TestCase):
                 result = osa('''on run argv
                     set workflowAction to load script POSIX file (item 1 of argv)
                     set curlExecutable of workflowAction to item 2 of argv
-                    set responseText to workflowAction's requestPayload("fixture-token", item 3 of argv)
+                    set responseText to workflowAction's requestPayload("fixture-token", item 3 of argv, "fixture-target")
                     if not workflowAction's confirmedResponse(responseText) then error "Valid fixture response rejected"
                     if workflowAction's confirmedResponse(item 4 of argv) then error "Error response accepted"
                     set failureText to workflowAction's failureMessage("HTTP 401 fixture-token", "fixture-token")

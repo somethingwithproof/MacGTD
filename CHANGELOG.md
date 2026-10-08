@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### API modernization
+
+- Notion capture uses API version 2026-03-11 and explicit data source parents, with unambiguous migration from existing database IDs.
+- Microsoft To Do capture uses Microsoft Graph v1.0 with delegated OAuth authorization; Google Keep capture uses Workspace Keep API v1. Undocumented browser capture shortcuts are replaced by confirmed API creation.
+- Alfred Todoist capture uses the shared unified API v1 adapter instead of an external CLI; setup no longer references retired REST v2 endpoints.
+- API workflows embed a shared adapter and production task parser, with explicit JSON keys, bounded HTTPS transport, and redacted errors.
+- Hosted native E2E now exercises all four API dialogs against a local TLS fixture and verifies persistence and failure behavior. Separate live vendor and licensed desktop suites fail on missing prerequisites; live account verification remains pending dedicated credentials.
+
 ### Fixed
 
 - Native capture uses the tested production parser; date markers, token boundaries, priorities, and list routing preserve task text.

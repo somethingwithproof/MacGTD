@@ -9,7 +9,7 @@
 
 **MacGTD is a collection of macOS workflows for capturing tasks, organizing reminders, and running timed focus sessions with the apps you already use.**
 
-Built around [Getting Things Done](https://gettingthingsdone.com/), it brings dialog, clipboard, and batch capture to Apple Reminders; event capture to Calendar; and task, note, project, and focus commands to Alfred. AppleScript and Automator keep the native workflows close to macOS. Additional capture adapters are included for Todoist, Notion, Things, OmniFocus, Microsoft To Do, and Google Keep; live integration testing for those providers is deferred.
+Built around [Getting Things Done](https://gettingthingsdone.com/), it brings dialog, clipboard, and batch capture to Apple Reminders; event capture to Calendar; and task, note, project, and focus commands to Alfred. AppleScript and Automator keep the native workflows close to macOS. API adapters use Todoist API v1, Notion API 2026-03-11, Microsoft Graph v1.0, and Google Keep v1. Things and OmniFocus adapters are also included. Hosted tests verify the API adapters against a local HTTPS fixture; live compatibility still requires dedicated provider accounts.
 
 ## What you can do
 
@@ -118,25 +118,27 @@ See the [Alfred guide](workflows/alfred/README.md) and [GTDLib library documenta
 
 ### External capture adapters
 
-These workflows are included and their bundles are validated, but live provider compatibility is not established by hosted E2E tests.
+All four API capture workflows are exercised through real Automator dialogs and a local TLS fixture in hosted E2E. A separate manual suite tests real vendor persistence when dedicated accounts are configured. Things and OmniFocus require the licensed desktop integration suite.
 
 | Target | Mechanism | Setup / source |
 | --- | --- | --- |
 | Todoist | API capture | [Workflow and Keychain setup](workflows/todoist/) |
-| Notion | Database API capture | [Workflow and Keychain setup](workflows/notion/) |
+| Notion | Data source API capture | [Workflow and Keychain setup](workflows/notion/) |
 | Things 3 | URL scheme | [Workflow](workflows/things/) |
 | OmniFocus | AppleScript / URL scheme | [Workflow](workflows/omnifocus/) |
-| Microsoft To Do | Native / browser capture | [Workflow](workflows/microsoft/) |
-| Google Keep | Browser capture | [Workflow](workflows/google/) |
+| Microsoft To Do | Microsoft Graph v1.0 | [Workflow](workflows/microsoft/) |
+| Google Keep | Workspace Keep API v1 | [Workflow](workflows/google/) |
 
-Todoist and Notion require one-time credential setup:
+API adapters require credential setup; Microsoft needs delegated OAuth authorization and Google Keep needs eligible Workspace access:
 
 ```bash
 ./workflows/todoist/setup-todoist.sh
 ./workflows/notion/setup-notion.sh
+./workflows/microsoft/setup-microsoft.sh
+./workflows/google/setup-google.sh
 ```
 
-Their payloads use JSON serialization, bounded HTTPS requests, and response confirmation. Error messages retain failure details while redacting the configured API token. See [SECURITY.md](SECURITY.md) for reporting security issues.
+See [API setup, migration, and authorization requirements](workflows/api/README.md). Existing Notion database IDs migrate only when exactly one data source is found. Microsoft and Google capture use APIs instead of undocumented browser shortcuts. OAuth access tokens require renewal through your OAuth client. Payloads use explicit JSON keys, bounded HTTPS requests, and response confirmation. Error messages retain failure details while redacting the configured API token. See [SECURITY.md](SECURITY.md) for reporting security issues.
 
 ### Menu bar and Shortcuts
 
@@ -166,14 +168,17 @@ Automator bundles embed AppleScript so they can run as native Services. Alfred p
 | Scope | Environment | What is checked |
 | --- | --- | --- |
 | Validation | GitHub-hosted macOS 15 and 26 | AppleScript compilation, bundles, production parser, action targets, preferences, focus state, fixture API transport, and package round trips |
+| Provider adapter E2E | GitHub-hosted `macos-15-intel` | All four production API dialogs, TLS transport, fixture persistence/readback, API failures, cancellation, and Notion source selection |
+| Live provider E2E | Manual GitHub-hosted Mac run with dedicated secrets | Real Todoist, Notion, Microsoft, and Google capture and vendor readback; fails if accounts are missing |
+| Licensed desktop integrations | Dedicated local account | Things 3, OmniFocus 4, and Alfred UI invocation and persistence |
 | Native desktop E2E | GitHub-hosted `macos-15-intel` | Real Automator dialogs; persisted Reminders and Calendar data; weekly review; menu counts; compiled GTDLib; packaged Alfred native actions; real launchd timer expiry and cancellation |
 | Optional Alfred UI | Dedicated local account, Alfred 5 + Powerpack | Workflow import, keyword invocation, and reminder readback through the licensed UI |
 
-The [verified implementation run](https://github.com/somethingwithproof/MacGTD/actions/runs/37818077714) passed **22 validation tests on each validation platform and 15 native desktop E2E tests**, with no failures, errors, or skips. Validation also runs repository structure checks. Current status is shown by the badges above.
+The [verified implementation run](https://github.com/somethingwithproof/MacGTD/actions/runs/37818077714) passed **22 validation tests on each validation platform and 15 native desktop E2E tests**, with no failures, errors, or skips, before the API modernization. New coverage is described above; check the latest CI reports for current counts. Validation also runs repository structure checks. Current status is shown by the badges above.
 
-Pull requests and pushes to `main` run validation followed by native E2E. The E2E workflow also runs nightly and on manual dispatch. It uses disposable GitHub-hosted Macs, isolated fixtures, and bounded subprocesses; no self-hosted runner or external account credentials are needed.
+Pull requests and pushes to `main` run validation followed by native E2E. The E2E workflow also runs nightly and on manual dispatch, including deterministic provider adapter tests. Live vendor tests use the separate manual `live-e2e.yml` workflow. It uses disposable GitHub-hosted Macs, isolated fixtures, and bounded subprocesses; no self-hosted runner or external account credentials are needed.
 
-Earlier macOS versions are not validated by current CI. Live external integrations, Shortcuts/Siri, and the licensed Alfred UI are outside hosted coverage. Native action tests exercise packaged Alfred scripts directly; they do not establish full Alfred UI compatibility. See [test setup, prerequisites, and coverage](tests/e2e/README.md).
+Earlier macOS versions are not validated by current CI. Live provider runs require dedicated secrets and have not yet been verified. Shortcuts/Siri and licensed desktop apps are outside the default hosted suite. Native action tests exercise packaged Alfred scripts directly; they do not establish full Alfred UI compatibility. See [test setup, prerequisites, and coverage](tests/e2e/README.md).
 
 ## Development
 

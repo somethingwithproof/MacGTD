@@ -12,8 +12,8 @@ on run argv
     if taskText of taskData is "" then error "Task title cannot be empty"
     if taskApp is "reminders" then return parser's createSmartTask(taskData)
     if taskApp is "todoist" then
-        -- Preserve the existing optional CLI adapter; input is one argument, never shell syntax.
-        return do shell script "/usr/bin/env todoist add " & quoted form of taskInput
+        set adapter to my loadComponent(scriptsPath & "/api_todoist.scpt")
+        return adapter's createdIdentifier(adapter's captureTask(taskInput))
     end if
     if taskApp is "things" then
         set components to current application's NSURLComponents's componentsWithString:"things:///add"
