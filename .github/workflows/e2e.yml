@@ -32,7 +32,7 @@ jobs:
       MACGTD_E2E_DEDICATED: '1'
       TEST_SUITE: ${{ inputs.test_suite || 'automator' }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: Install pinned test runtime
@@ -45,7 +45,7 @@ jobs:
         run: mise exec -- python tests/run.py "$TEST_SUITE"
       - name: Upload E2E reports, logs, and tested package
         if: always()
-        uses: actions/upload-artifact@ea054f6ae7f16e93dc7311f5ec628a73f5ab4fe0 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
