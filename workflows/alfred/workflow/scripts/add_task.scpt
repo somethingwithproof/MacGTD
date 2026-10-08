@@ -38,7 +38,9 @@ on loadComponent(sourcePath)
     try
         set compiledPath to temporaryDirectory & "/component.scpt"
         do shell script "/usr/bin/osacompile -o " & quoted form of compiledPath & " " & quoted form of sourcePath
-        set component to load script POSIX file compiledPath
+        -- A plain AppleScript loader avoids macOS 15's nested ASObjC load coercion bug.
+        set loaderSource to "on run argv\n return load script POSIX file (item 1 of argv)\nend run"
+        set component to run script loaderSource with parameters {compiledPath}
         do shell script "/bin/rm -rf " & quoted form of temporaryDirectory
         return component
     on error messageText number errorNumber

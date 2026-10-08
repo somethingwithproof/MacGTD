@@ -183,3 +183,13 @@ class Components(unittest.TestCase):
             return libraryObject's _sanitizeString("O'Brien")
         end run''', bundle)
         self.assertEqual(result, "O'Brien")
+
+    def test_foundation_component_loads_preferences_through_plain_loader(self):
+        for name in ("add_task.scpt", "focus_timer.scpt", "preferences_editor.scpt"):
+            with self.subTest(component=name):
+                result = osa('''on run argv
+                    set outerComponent to load script POSIX file (item 1 of argv)
+                    set manager to outerComponent's loadComponent(item 2 of argv)
+                    return manager's readPreference("taskApp")
+                end run''', self.compiled(name), SCRIPTS / "preferences_manager.scpt", env=self.env)
+                self.assertEqual(result, "reminders")

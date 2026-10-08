@@ -100,4 +100,3 @@ def workflow(source, responses=(), cancel=False):
             RESULTS.mkdir(exist_ok=True)
             with (RESULTS / "automator.log").open("a") as stream:
                 stream.write(f"{source.name}: exit {process.returncode}\n{log}\n")
-
