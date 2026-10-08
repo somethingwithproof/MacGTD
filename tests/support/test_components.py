@@ -150,9 +150,11 @@ class Components(unittest.TestCase):
         import sys
         curl = self.path / "fixture-curl"
         captured = self.path / "argv.json"
+        headers = self.path / "headers.txt"
         response = {"id": "fixture-id", "content": "fixture-task", "object": "page", "properties": {}}
         curl.write_text("#!"+sys.executable+"\nimport json,sys\nfrom pathlib import Path\n"
                         +"Path("+repr(str(captured))+").write_text(json.dumps(sys.argv[1:]))\n"
+                        +"Path("+repr(str(headers))+").write_text(sys.stdin.read())\n"
                         +"print("+repr(json.dumps(response))+")\n")
         curl.chmod(0o755)
         payload = json.dumps({"content": 'O\'Brien "quoted" café\nsecond line'})
@@ -167,7 +169,7 @@ class Components(unittest.TestCase):
                 result = osa('''on run argv
                     set workflowAction to load script POSIX file (item 1 of argv)
                     set curlExecutable of workflowAction to item 2 of argv
-                    set responseText to workflowAction's requestPayload("fixture-token", item 3 of argv)
+                    set responseText to workflowAction's requestPayload("fixture-token", item 3 of argv, "fixture-target")
                     if not workflowAction's confirmedResponse(responseText) then error "Valid fixture response rejected"
                     if workflowAction's confirmedResponse(item 4 of argv) then error "Error response accepted"
                     set failureText to workflowAction's failureMessage("HTTP 401 fixture-token", "fixture-token")
@@ -178,7 +180,9 @@ class Components(unittest.TestCase):
                 self.assertEqual(json.loads(result)["id"], "fixture-id")
                 arguments = json.loads(captured.read_text())
                 self.assertEqual(arguments[arguments.index("--data-binary")+1], payload)
-                self.assertIn("Authorization: Bearer fixture-token", arguments)
+                self.assertNotIn("fixture-token", " ".join(arguments))
+                self.assertIn("@-", arguments)
+                self.assertEqual(headers.read_text(), "Authorization: Bearer fixture-token\n")
                 self.assertEqual(arguments.count(payload), 1)
 
     def test_library_initialization_and_title_preservation(self):

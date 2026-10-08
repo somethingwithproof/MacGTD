@@ -21,6 +21,7 @@ workflow/
 ├── info.plist                      # Alfred workflow definition
 ├── icons/icon.png                  # Workflow icon
 └── scripts/
+    ├── api_todoist.scpt            # Generated unified Todoist API adapter
     ├── add_task.scpt               # Task creation and routing
     ├── add_note.scpt               # Reference reminder with note body
     ├── add_project.scpt            # Create a Reminders list
@@ -54,8 +55,14 @@ Preferences are stored in `~/Library/Preferences/com.alfredgtd.plist`. Configure
 ## Requirements
 
 - Alfred 4+ with Powerpack
-- macOS 10.14+
+- Current validation covers macOS 15 and 26; older macOS versions are not validated by CI.
 - The target GTD app must be installed
+
+## Todoist API setup
+
+Todoist routing uses the generated shared API v1 adapter; no external `todoist` CLI is required. Run `./workflows/todoist/setup-todoist.sh` from the repository to store the token in Keychain, then select `todoist` in preferences. An optional `project-id` entry under `MacGTD-Todoist` sets the target project. Date-only markers remain calendar dates; explicit times become UTC ISO timestamps. See [API setup and migration](../api/README.md).
+
+Build the current package with `./scripts/package-alfred.sh`, then open `dist/MacGTD.alfredworkflow`. Tagged release packages can predate changes on `main`.
 
 ## Focus sessions and testing
 
@@ -63,4 +70,4 @@ Preferences are stored in `~/Library/Preferences/com.alfredgtd.plist`. Configure
 
 The workflow also exposes clipboard capture, analytics, and preferences keywords. Notes are stored as Reminders in the Reference list. Inbox processing opens the list for human review; it does not automatically complete or move tasks.
 
-Run `mise exec -- python tests/run.py validation` for compilation, parser, component, action-graph, and package checks. GitHub-hosted native tests verify Reminders, the shared library, and focus timer ownership. Real Alfred keyword invocation requires the separate local Powerpack suite described in [E2E testing](../../tests/e2e/README.md). Live external integrations are deferred.
+Run `mise exec -- python tests/run.py validation` for compilation, parser, component, action-graph, and package checks. GitHub-hosted native tests verify Reminders, the shared library, and focus timer ownership. Real Alfred keyword invocation requires the separate local Powerpack suite described in [E2E testing](../../tests/e2e/README.md). The packaged Todoist action also runs against a TLS persistence fixture. Real vendor testing uses the manual live suite with dedicated accounts; licensed Things/OmniFocus and Alfred UI tests require a provisioned local Mac. A passing fixture run does not establish live compatibility.

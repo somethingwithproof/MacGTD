@@ -21,6 +21,9 @@ class Validation(unittest.TestCase):
     def test_embedded_parser_is_synchronized(self):
         command("mise", "exec", "--", "python", "scripts/sync-native-parser.py", "--check")
 
+    def test_embedded_provider_adapters_are_synchronized(self):
+        command("mise", "exec", "--", "python", "scripts/sync-provider-workflows.py", "--check")
+
     def test_production_parser(self):
         command("bash", "tests/test_natural_language_parser.sh", timeout=120)
 

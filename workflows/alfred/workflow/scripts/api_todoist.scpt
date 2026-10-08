@@ -1,57 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>AMApplicationBuild</key>
-	<string>521.1</string>
-	<key>AMApplicationVersion</key>
-	<string>2.10</string>
-	<key>AMDocumentVersion</key>
-	<string>2</string>
-	<key>actions</key>
-	<array>
-		<dict>
-			<key>action</key>
-			<dict>
-				<key>AMAccepts</key>
-				<dict>
-					<key>Container</key>
-					<string>List</string>
-					<key>Optional</key>
-					<true/>
-					<key>Types</key>
-					<array>
-						<string>com.apple.applescript.object</string>
-					</array>
-				</dict>
-				<key>AMActionVersion</key>
-				<string>1.0.2</string>
-				<key>AMApplication</key>
-				<array>
-					<string>Automator</string>
-				</array>
-				<key>AMParameterProperties</key>
-				<dict>
-					<key>source</key>
-					<dict/>
-				</dict>
-				<key>AMProvides</key>
-				<dict>
-					<key>Container</key>
-					<string>List</string>
-					<key>Types</key>
-					<array>
-						<string>com.apple.applescript.object</string>
-					</array>
-				</dict>
-				<key>ActionBundlePath</key>
-				<string>/System/Library/Automator/Run AppleScript.action</string>
-				<key>ActionName</key>
-				<string>Run AppleScript</string>
-				<key>ActionParameters</key>
-				<dict>
-					<key>source</key>
-					<string>-- Shared production adapter. scripts/sync-provider-workflows.py embeds this source
+-- Shared production adapter. scripts/sync-provider-workflows.py embeds this source
 -- and the production task parser into every standalone API capture bundle.
 use AppleScript version "2.4"
 use scripting additions
@@ -65,13 +12,9 @@ property targetAccount : "project-id"
 property curlExecutable : "/usr/bin/curl"
 property notionApiVersion : "2026-03-11"
 
-on run {input, parameters}
-    display dialog "Enter task (!1/!2/!3 priority, due:date, @context):" default answer "" with title captureTitle
-    set inputText to text returned of result
-    if my trimText(inputText) is "" then return input
-    set createdRecord to my captureTask(inputText)
-    display notification "Captured: " &amp; (taskText of (my parseTaskInput(inputText))) with title captureTitle
-    return my createdIdentifier(createdRecord)
+on run argv
+    if count of argv is not 1 then error "Provide one task description"
+    return my createdIdentifier(my captureTask(item 1 of argv))
 end run
 
 on createdIdentifier(createdRecord)
@@ -84,14 +27,14 @@ on captureTask(inputText)
     set taskData to my parseTaskInput(inputText)
     if taskText of taskData is "" then error "Task title cannot be empty"
     set apiToken to my configuration(tokenEnvironment, "api-token")
-    if apiToken is "" then error "Configure " &amp; providerName &amp; " credentials in Keychain or " &amp; tokenEnvironment
+    if apiToken is "" then error "Configure " & providerName & " credentials in Keychain or " & tokenEnvironment
     try
         set targetID to my configuration(targetEnvironment, targetAccount)
         if providerName is "notion" then set targetID to my resolveDataSource(apiToken, targetID)
         if providerName is "microsoft" and targetID is "" then error "Configure a Microsoft To Do list ID"
         set payload to my buildPayload(taskData, targetID)
         set responseText to my requestPayload(apiToken, my serializeJSON(payload), targetID)
-        if not my confirmedResponse(responseText) then error providerName &amp; " did not confirm creation"
+        if not my confirmedResponse(responseText) then error providerName & " did not confirm creation"
         return my parseJSON(responseText)
     on error messageText
         error (my failureMessage(messageText, apiToken))
@@ -109,7 +52,7 @@ end configuration
 
 on getKeychainValue(serviceName, accountName)
     try
-        return do shell script "/usr/bin/security find-generic-password -s " &amp; quoted form of serviceName &amp; " -a " &amp; quoted form of accountName &amp; " -w 2&gt;/dev/null"
+        return do shell script "/usr/bin/security find-generic-password -s " & quoted form of serviceName & " -a " & quoted form of accountName & " -w 2>/dev/null"
     on error
         return ""
     end try
@@ -121,7 +64,7 @@ on resolveDataSource(apiToken, selectedID)
     set databaseID to my configuration("MACGTD_NOTION_DATABASE_ID", "database-id")
     if databaseID is "" then error "Configure a Notion data source ID"
     set databaseID to my validUUID(databaseID)
-    set responseObject to my parseJSON(my requestAPI(apiToken, "GET", "https://api.notion.com/v1/databases/" &amp; databaseID, ""))
+    set responseObject to my parseJSON(my requestAPI(apiToken, "GET", "https://api.notion.com/v1/databases/" & databaseID, ""))
     if (responseObject's objectForKey:"object") as text is not "database" then error "Notion database discovery failed"
     set sources to responseObject's objectForKey:"data_sources"
     if sources is missing value then error "Notion did not return data sources"
@@ -135,7 +78,7 @@ end resolveDataSource
 on validUUID(identifier)
     -- Older setup copied compact IDs from database URLs; retain that migration path.
     if my findPattern(identifier, "^[0-9A-Fa-f]{32}$") is not "" then
-        set identifier to text 1 thru 8 of identifier &amp; "-" &amp; text 9 thru 12 of identifier &amp; "-" &amp; text 13 thru 16 of identifier &amp; "-" &amp; text 17 thru 20 of identifier &amp; "-" &amp; text 21 thru 32 of identifier
+        set identifier to text 1 thru 8 of identifier & "-" & text 9 thru 12 of identifier & "-" & text 13 thru 16 of identifier & "-" & text 17 thru 20 of identifier & "-" & text 21 thru 32 of identifier
     end if
     set parsedUUID to current application's NSUUID's alloc()'s initWithUUIDString:identifier
     if parsedUUID is missing value then error "Notion IDs must be UUIDs; use Copy data source ID in Notion"
@@ -161,7 +104,7 @@ on buildPayload(taskData, targetID)
         set labels to current application's NSMutableArray's array()
         if contextValue is not "" then labels's addObject:(text 2 thru -1 of contextValue)
         if projectValue is not "" then labels's addObject:projectValue
-        if labels's |count|() &gt; 0 then payload's setObject:labels forKey:"labels"
+        if labels's |count|() > 0 then payload's setObject:labels forKey:"labels"
         return payload
     end if
     if providerName is "notion" then
@@ -171,7 +114,7 @@ on buildPayload(taskData, targetID)
         set propertiesObject to current application's NSMutableDictionary's dictionary()
         propertiesObject's setObject:titleObject forKey:"Name"
         propertiesObject's setObject:(my jsonObject({"select"}, {my jsonObject({"name"}, {"Inbox"})})) forKey:"Status"
-        if priorityValue &gt; 0 then
+        if priorityValue > 0 then
             set priorityLabel to item priorityValue of {"High", "Medium", "Low"}
             propertiesObject's setObject:(my jsonObject({"select"}, {my jsonObject({"name"}, {priorityLabel})})) forKey:"Priority"
         end if
@@ -194,7 +137,7 @@ on buildPayload(taskData, targetID)
         set payload to current application's NSMutableDictionary's dictionaryWithDictionary:(my jsonObject({"title", "importance", "status"}, {capturedText, importanceValue, "notStarted"}))
         if dueValue is not missing value then
             set dateValue to my isoDateTime(dueValue)
-            if not hasDueTime of taskData then set dateValue to (my isoDate(dueValue)) &amp; "T00:00:00Z"
+            if not hasDueTime of taskData then set dateValue to (my isoDate(dueValue)) & "T00:00:00Z"
             payload's setObject:(my jsonObject({"dateTime", "timeZone"}, {text 1 thru -2 of dateValue, "UTC"})) forKey:"dueDateTime"
         end if
         set metadataText to my metadata(taskData)
@@ -204,8 +147,8 @@ on buildPayload(taskData, targetID)
     if providerName is "google" then
         -- Keep is a note service: retain task metadata as text, never invent task fields.
         set noteText to my metadata(taskData)
-        if priorityValue &gt; 0 then set noteText to noteText &amp; "Priority: " &amp; priorityValue &amp; linefeed
-        if dueValue is not missing value then set noteText to noteText &amp; "Due: " &amp; (my dueText(taskData)) &amp; linefeed
+        if priorityValue > 0 then set noteText to noteText & "Priority: " & priorityValue & linefeed
+        if dueValue is not missing value then set noteText to noteText & "Due: " & (my dueText(taskData)) & linefeed
         if noteText is "" then set noteText to capturedText
         set textObject to my jsonObject({"text"}, {noteText})
         return my jsonObject({"title", "body"}, {capturedText, my jsonObject({"text"}, {textObject})})
@@ -219,8 +162,8 @@ end jsonObject
 
 on metadata(taskData)
     set resultText to ""
-    if context of taskData is not "" then set resultText to "Context: " &amp; context of taskData &amp; linefeed
-    if project of taskData is not "" then set resultText to resultText &amp; "Project: " &amp; project of taskData &amp; linefeed
+    if context of taskData is not "" then set resultText to "Context: " & context of taskData & linefeed
+    if project of taskData is not "" then set resultText to resultText & "Project: " & project of taskData & linefeed
     return resultText
 end metadata
 
@@ -236,7 +179,7 @@ end dueText
 
 on isoDate(dateValue)
     -- Read calendar components directly so a date-only marker never shifts in UTC.
-    return (year of dateValue as text) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; (month of dateValue as integer)) &amp; "-" &amp; text -2 thru -1 of ("0" &amp; day of dateValue)
+    return (year of dateValue as text) & "-" & text -2 thru -1 of ("0" & (month of dateValue as integer)) & "-" & text -2 thru -1 of ("0" & day of dateValue)
 end isoDate
 
 on isoDateTime(dateValue)
@@ -257,7 +200,7 @@ on captureURL(targetID)
         set allowedCharacters to current application's NSCharacterSet's characterSetWithCharactersInString:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
         set encodedTarget to (current application's NSString's stringWithString:targetID)'s stringByAddingPercentEncodingWithAllowedCharacters:allowedCharacters
         set component to current application's NSURLComponents's componentsWithString:"https://graph.microsoft.com"
-        component's setPercentEncodedPath:("/v1.0/me/todo/lists/" &amp; (encodedTarget as text) &amp; "/tasks")
+        component's setPercentEncodedPath:("/v1.0/me/todo/lists/" & (encodedTarget as text) & "/tasks")
         return component's |URL|()'s absoluteString() as text
     end if
     error "Unsupported API provider"
@@ -272,7 +215,7 @@ on requestAPI(apiToken, methodName, requestURL, jsonBody)
     set argumentValues to current application's NSMutableArray's arrayWithArray:{"--fail-with-body", "--silent", "--show-error", "--proto", "=https", "--proto-redir", "=https", "--tlsv1.2", "--connect-timeout", "10", "--max-time", "30", "-X", methodName, requestURL, "-H", "@-", "-H", "Content-Type: application/json"}
     if providerName is "notion" then
         argumentValues's addObject:"-H"
-        argumentValues's addObject:("Notion-Version: " &amp; notionApiVersion)
+        argumentValues's addObject:("Notion-Version: " & notionApiVersion)
     end if
     if methodName is "POST" then
         argumentValues's addObject:"--data-binary"
@@ -288,14 +231,14 @@ on requestAPI(apiToken, methodName, requestURL, jsonBody)
     -- One drained pipe prevents stdout/stderr backpressure deadlocks.
     curlTask's setStandardError:outputPipe
     if not (curlTask's launchAndReturnError:(missing value)) then error "Could not launch capture transport"
-    set authorizationHeader to current application's NSString's stringWithString:("Authorization: Bearer " &amp; apiToken &amp; linefeed)
+    set authorizationHeader to current application's NSString's stringWithString:("Authorization: Bearer " & apiToken & linefeed)
     (inputPipe's fileHandleForWriting())'s writeData:(authorizationHeader's dataUsingEncoding:(current application's NSUTF8StringEncoding))
     (inputPipe's fileHandleForWriting())'s closeFile()
     set responseData to (outputPipe's fileHandleForReading())'s readDataToEndOfFile()
     curlTask's waitUntilExit()
     set responseText to (current application's NSString's alloc()'s initWithData:responseData encoding:(current application's NSUTF8StringEncoding))
     if responseText is missing value then error "Provider response is not UTF-8 text"
-    if curlTask's terminationStatus() is not 0 then error "Transport failed (" &amp; (curlTask's terminationStatus() as text) &amp; "): " &amp; (responseText as text)
+    if curlTask's terminationStatus() is not 0 then error "Transport failed (" & (curlTask's terminationStatus() as text) & "): " & (responseText as text)
     return responseText as text
 end requestAPI
 
@@ -327,7 +270,7 @@ on confirmedResponse(responseText)
             set bodyObject to responseObject's objectForKey:"body"
             if bodyObject is missing value then return false
             if not (bodyObject's isKindOfClass:(current application's NSDictionary)) then return false
-            return (recordName as text) starts with "notes/" and (length of (recordName as text)) &gt; 6
+            return (recordName as text) starts with "notes/" and (length of (recordName as text)) > 6
         end if
         set identifier to responseObject's objectForKey:"id"
         if identifier is missing value then return false
@@ -352,12 +295,12 @@ end confirmedResponse
 on failureMessage(messageText, apiToken)
     set safeMessage to current application's NSString's stringWithString:messageText
     if apiToken is not "" then set safeMessage to safeMessage's stringByReplacingOccurrencesOfString:apiToken withString:"[redacted]"
-    return "Capture API request failed: " &amp; (safeMessage as text)
+    return "Capture API request failed: " & (safeMessage as text)
 end failureMessage
 
-property contextPattern : "(?&lt;!\\S)@[A-Za-z0-9_-]+(?=\\s|$)"
-property projectPattern : "(?&lt;!\\S)\\+[A-Za-z0-9_-]+(?=\\s|$)"
-property priorityPattern : "(?&lt;!\\S)![1-3](?=\\s|$)"
+property contextPattern : "(?<!\\S)@[A-Za-z0-9_-]+(?=\\s|$)"
+property projectPattern : "(?<!\\S)\\+[A-Za-z0-9_-]+(?=\\s|$)"
+property priorityPattern : "(?<!\\S)![1-3](?=\\s|$)"
 
 on parseTaskInput(inputText)
     set taskData to {originalText:inputText, taskText:"", context:"", project:"", dueDate:missing value, hasDueTime:false, priority:0, notes:""}
@@ -387,7 +330,7 @@ on extractDateTime(inputText)
     set parsedDate to missing value
     set cleanedText to inputText
     set weekdayNames to "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
-    set datePattern to "(?i)(?&lt;!\\S)(?:due:)?(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|today|tomorrow|next week|next (?:" &amp; weekdayNames &amp; ")|" &amp; weekdayNames &amp; ")(?=\\s|$)"
+    set datePattern to "(?i)(?<!\\S)(?:due:)?(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|today|tomorrow|next week|next (?:" & weekdayNames & ")|" & weekdayNames & ")(?=\\s|$)"
     set dateMatch to my findPattern(inputText, datePattern)
     if dateMatch is not "" then
         set dateWord to ((current application's NSString's stringWithString:dateMatch)'s lowercaseString()) as text
@@ -408,15 +351,15 @@ on extractDateTime(inputText)
         end if
         set cleanedText to my removePattern(inputText, dateMatch)
     end if
-    if my findPattern(cleanedText, "(?&lt;!\\S)due:[^\\s]+") is not "" then error "Unsupported or invalid due date"
+    if my findPattern(cleanedText, "(?<!\\S)due:[^\\s]+") is not "" then error "Unsupported or invalid due date"
     -- Plain quantities are never times. Bare hours require 'at' or AM/PM.
-    set timePattern to "(?i)(?&lt;!\\S)(?:at\\s+[0-9]{1,2}(?::[0-9]{2})?(?:am|pm)?|[0-9]{1,2}:[0-9]{2}(?:am|pm)?|[0-9]{1,2}(?:am|pm))(?=\\s|$)"
+    set timePattern to "(?i)(?<!\\S)(?:at\\s+[0-9]{1,2}(?::[0-9]{2})?(?:am|pm)?|[0-9]{1,2}:[0-9]{2}(?:am|pm)?|[0-9]{1,2}(?:am|pm))(?=\\s|$)"
     set timeMatch to my findPattern(cleanedText, timePattern)
     if timeMatch is not "" then
         set timeWord to timeMatch
         if timeWord starts with "at " then set timeWord to my trimText(text 4 thru -1 of timeWord)
         set secondsOfDay to my parseTime(timeWord)
-        if secondsOfDay is missing value then error "Invalid time: " &amp; timeWord
+        if secondsOfDay is missing value then error "Invalid time: " & timeWord
         if parsedDate is missing value then set parsedDate to current date
         set time of parsedDate to secondsOfDay
         set cleanedText to my removePattern(cleanedText, timeMatch)
@@ -429,7 +372,7 @@ on parseISODate(dateText)
     set y to text 1 thru 4 of dateText as integer
     set m to text 6 thru 7 of dateText as integer
     set d to text 9 thru 10 of dateText as integer
-    if y &lt; 1900 or m &lt; 1 or m &gt; 12 or d &lt; 1 or d &gt; 31 then error "Invalid ISO date"
+    if y < 1900 or m < 1 or m > 12 or d < 1 or d > 31 then error "Invalid ISO date"
     set resultDate to current date
     set day of resultDate to 1
     set year of resultDate to y
@@ -451,18 +394,18 @@ on parseTime(timeStr)
         end if
         set colonPosition to offset of ":" in timeStr
         set theMinute to 0
-        if colonPosition &gt; 0 then
+        if colonPosition > 0 then
             set theHour to text 1 thru (colonPosition - 1) of timeStr as integer
             set theMinute to text (colonPosition + 1) thru -1 of timeStr as integer
         else
             set theHour to timeStr as integer
         end if
-        if theMinute &gt; 59 then return missing value
+        if theMinute > 59 then return missing value
         if suffix is not "" then
-            if theHour &lt; 1 or theHour &gt; 12 then return missing value
+            if theHour < 1 or theHour > 12 then return missing value
             if theHour is 12 then set theHour to 0
             if suffix is "pm" then set theHour to theHour + 12
-        else if theHour &gt; 23 then
+        else if theHour > 23 then
             return missing value
         end if
         return theHour * hours + theMinute * minutes
@@ -498,7 +441,7 @@ end findPattern
 on removePattern(theText, patternText)
     set valueString to current application's NSString's stringWithString:theText
     set escapedMarker to current application's NSRegularExpression's escapedPatternForString:patternText
-    set expression to current application's NSRegularExpression's regularExpressionWithPattern:("(?&lt;!\\S)" &amp; (escapedMarker as text) &amp; "(?=\\s|$)") options:0 |error|:(missing value)
+    set expression to current application's NSRegularExpression's regularExpressionWithPattern:("(?<!\\S)" & (escapedMarker as text) & "(?=\\s|$)") options:0 |error|:(missing value)
     set found to expression's firstMatchInString:valueString options:0 range:{0, valueString's |length|()}
     if found is missing value then return theText
     return (valueString's stringByReplacingCharactersInRange:(found's range()) withString:" ") as text
@@ -509,74 +452,3 @@ on trimText(theText)
     set valueString to valueString's stringByReplacingOccurrencesOfString:"\\s+" withString:" " options:(current application's NSRegularExpressionSearch) range:{0, valueString's |length|()}
     return (valueString's stringByTrimmingCharactersInSet:(current application's NSCharacterSet's whitespaceAndNewlineCharacterSet())) as text
 end trimText
-</string>
-				</dict>
-				<key>BundleIdentifier</key>
-				<string>com.apple.Automator.RunScript</string>
-				<key>CFBundleVersion</key>
-				<string>1.0.2</string>
-				<key>CanShowSelectedItemsWhenRun</key>
-				<false/>
-				<key>CanShowWhenRun</key>
-				<true/>
-				<key>Category</key>
-				<array>
-					<string>AMCategoryUtilities</string>
-				</array>
-				<key>Class Name</key>
-				<string>RunScriptAction</string>
-				<key>InputUUID</key>
-				<string>A8B9C1D2-E3F4-5678-9ABC-DEF012345678</string>
-				<key>Keywords</key>
-				<array>
-					<string>Run</string>
-				</array>
-				<key>OutputUUID</key>
-				<string>B9C1D2E3-F456-7890-ABCD-EF0123456789</string>
-				<key>UUID</key>
-				<string>C1D2E3F4-5678-90AB-CDEF-012345678901</string>
-				<key>UnlocalizedApplications</key>
-				<array>
-					<string>Automator</string>
-				</array>
-				<key>arguments</key>
-				<dict>
-					<key>0</key>
-					<dict>
-						<key>default</key>
-						<string>on run {input, parameters}
-
-	(* Your script goes here *)
-
-	return input
-end run</string>
-						<key>name</key>
-						<string>source</string>
-						<key>required</key>
-						<string>0</string>
-						<key>type</key>
-						<string>0</string>
-						<key>uuid</key>
-						<string>0</string>
-					</dict>
-				</dict>
-				<key>isViewVisible</key>
-				<integer>1</integer>
-				<key>location</key>
-				<string>449.500000:316.000000</string>
-				<key>nibPath</key>
-				<string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/Base.lproj/main.nib</string>
-			</dict>
-			<key>isViewVisible</key>
-			<integer>1</integer>
-		</dict>
-	</array>
-	<key>connectors</key>
-	<dict/>
-	<key>workflowMetaData</key>
-	<dict>
-		<key>workflowTypeVersion</key>
-		<integer>2</integer>
-	</dict>
-</dict>
-</plist>

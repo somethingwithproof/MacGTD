@@ -52,19 +52,37 @@ class Report(unittest.TextTestResult):
         self.xml = ET.Element("testsuite")
 
 
+def suite_modules(name, include_live=False):
+    suites = {
+        "validation": ["support.test_harness", "support.test_validation", "support.test_components", "support.test_api_contract", "support.test_live_support"],
+        "automator": ["support.test_native", "support.test_provider_e2e"],
+        "providers": ["support.test_provider_e2e"],
+        "alfred": ["support.test_alfred"],
+        "desktop-integrations": ["support.test_alfred", "support.test_desktop_integrations"],
+        "live": ["support.test_live_providers"],
+        "all": ["support.test_native", "support.test_alfred", "support.test_provider_e2e"],
+    }
+    modules = list(suites[name])
+    if include_live:
+        if name != "all":
+            raise ValueError("--live is only supported with the all suite")
+        modules += ["support.test_live_providers", "support.test_desktop_integrations"]
+    return modules
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("suite", choices=("validation", "all", "alfred", "automator"))
+    parser.add_argument("suite", choices=("validation", "all", "alfred", "automator", "providers", "live", "desktop-integrations"))
     parser.add_argument("--filter", help="Run tests whose IDs contain this text")
+    parser.add_argument("--live", action="store_true", help="Include required live APIs and licensed apps in the all suite")
     args = parser.parse_args()
     os.chdir(ROOT)
     results = ROOT / "test-results"
     results.mkdir(exist_ok=True)
-    modules = ["support.test_harness", "support.test_validation", "support.test_components"] if args.suite == "validation" else []
-    if args.suite in ("all", "automator"):
-        modules += ["support.test_native"]
-    if args.suite in ("all", "alfred"):
-        modules += ["support.test_alfred"]
+    try:
+        modules = suite_modules(args.suite, args.live)
+    except ValueError as exc:
+        parser.error(str(exc))
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromName(m) for m in modules)
     if args.filter:
         def flatten(items):

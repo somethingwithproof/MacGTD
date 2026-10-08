@@ -13,7 +13,7 @@ on run argv
 end run
 
 on parseTaskInput(inputText)
-    set taskData to {originalText:inputText, taskText:"", context:"", project:"", dueDate:missing value, priority:0, notes:""}
+    set taskData to {originalText:inputText, taskText:"", context:"", project:"", dueDate:missing value, hasDueTime:false, priority:0, notes:""}
     set marker to my findPattern(inputText, contextPattern)
     if marker is not "" then
         set context of taskData to marker
@@ -31,6 +31,7 @@ on parseTaskInput(inputText)
     end if
     set dateInfo to my extractDateTime(inputText)
     set dueDate of taskData to parsedDate of dateInfo
+    set hasDueTime of taskData to hasExplicitTime of dateInfo
     set taskText of taskData to my trimText(cleanedText of dateInfo)
     return taskData
 end parseTaskInput
@@ -73,7 +74,7 @@ on extractDateTime(inputText)
         set time of parsedDate to secondsOfDay
         set cleanedText to my removePattern(cleanedText, timeMatch)
     end if
-    return {parsedDate:parsedDate, cleanedText:cleanedText}
+    return {parsedDate:parsedDate, cleanedText:cleanedText, hasExplicitTime:(timeMatch is not "")}
 end extractDateTime
 
 on parseISODate(dateText)
