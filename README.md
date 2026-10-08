@@ -1,7 +1,10 @@
 # MacGTD
 
 [![CI](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=somethingwithproof_MacGTD&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=somethingwithproof_MacGTD)
+[![Release](https://img.shields.io/github/v/release/somethingwithproof/MacGTD)](https://github.com/somethingwithproof/MacGTD/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/somethingwithproof/MacGTD/badge)](https://scorecard.dev/viewer/?uri=github.com/somethingwithproof/MacGTD)
 
 macOS automation for [Getting Things Done](https://gettingthingsdone.com/) — quick-capture workflows for 8 platforms with natural language parsing, priority/due dates, contexts, and projects.
 
@@ -189,10 +192,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 This repo consolidates several previously separate repositories:
 
-- [MacGTD-Native](https://github.com/thomasvincent/MacGTD-Native) (archived)
-- [MacGTD-Microsoft](https://github.com/thomasvincent/MacGTD-Microsoft) (archived)
-- [MacGTD-Google](https://github.com/thomasvincent/MacGTD-Google) (archived)
-- [AlfredGTD](https://github.com/thomasvincent/AlfredGTD) (archived)
+- MacGTD-Native (archived)
+- MacGTD-Microsoft (archived)
+- MacGTD-Google (archived)
+- AlfredGTD (archived)
 
 ## License
 

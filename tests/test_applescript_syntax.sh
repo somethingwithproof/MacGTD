@@ -6,11 +6,13 @@ trap 'rm -rf "$TEST_DIR"' EXIT
 passed=0
 failed=0
 compile() {
-    if osacompile -o "$TEST_DIR/compiled.scpt" "$1" > "$TEST_DIR/output.log" 2>&1; then
-        echo "PASS: $2"
+    local source_path="$1"
+    local display_name="$2"
+    if osacompile -o "$TEST_DIR/compiled.scpt" "$source_path" > "$TEST_DIR/output.log" 2>&1; then
+        echo "PASS: $display_name"
         passed=$((passed + 1))
     else
-        echo "FAIL: $2"
+        echo "FAIL: $display_name"
         cat "$TEST_DIR/output.log"
         failed=$((failed + 1))
     fi

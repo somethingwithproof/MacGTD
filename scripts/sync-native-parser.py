@@ -63,7 +63,7 @@ on parseEventInput(inputText)
 end parseEventInput'''
 
 for bundle, entry in (("GTD-QuickCapture", replacement), ("GTD-EventCapture", event_replacement)):
-    embedded = re.sub(r"on run argv\n.*?end run", lambda match: entry, source, count=1, flags=re.DOTALL)
+    embedded = re.sub(r"on run argv\n.*?end run", lambda match, replacement_entry=entry: replacement_entry, source, count=1, flags=re.DOTALL)
     path = ROOT / "workflows/apple" / (bundle + ".workflow/Contents/document.wflow")
     data = plistlib.loads(path.read_bytes())
     parameters = data["actions"][0]["action"]["ActionParameters"]

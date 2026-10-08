@@ -31,11 +31,17 @@ def run(*args, check=True):
     return result
 
 
-def grant(database, clients):
+def grant(database_key, clients):
+    # CLI input selects a fixed hosted-image database; it never becomes a connection URI.
+    databases = {"system": Path("/Library/Application Support/com.apple.TCC/TCC.db"),
+                 "user": Path("/Users/runner/Library/Application Support/com.apple.TCC/TCC.db")}
+    if database_key not in databases:
+        raise RuntimeError("Unknown hosted TCC database")
+    database = databases[database_key]
     if not database.is_file():
         raise RuntimeError(f"TCC database is missing: {database}")
     targets = ("com.apple.reminders", "com.apple.iCal", "com.apple.systemevents", "com.apple.Automator")
-    with sqlite3.connect(f"file:{database}?mode=rw", uri=True, timeout=15) as connection:
+    with sqlite3.connect(database, timeout=15) as connection:
         columns = {row[1] for row in connection.execute("PRAGMA table_info(access)")}
         if not {"service", "client", "client_type", "auth_value"}.issubset(columns):
             raise RuntimeError("Unsupported TCC schema")
@@ -60,7 +66,7 @@ def grant(database, clients):
 def main():
     require_hosted()
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--database", type=Path)
+    parser.add_argument("--database", choices=("system", "user"))
     parser.add_argument("--clients", type=Path)
     args = parser.parse_args()
     if args.database:
@@ -83,9 +89,9 @@ def main():
     clients += [[bundle, 0] for bundle in ("com.apple.Automator", "com.apple.AutomatorRunner", "com.apple.reminders", "com.apple.iCal")]
     manifest = results / "desktop-clients.plist"
     manifest.write_bytes(plistlib.dumps(clients))
-    databases = [Path("/Library/Application Support/com.apple.TCC/TCC.db"),
-                 Path.home() / "Library/Application Support/com.apple.TCC/TCC.db"]
-    for database in databases:
+    if Path.home() != Path("/Users/runner"):
+        raise RuntimeError("Unexpected GitHub-hosted test account")
+    for database in ("system", "user"):
         run("sudo", "env", "GITHUB_ACTIONS=true", "RUNNER_ENVIRONMENT=github-hosted",
             sys.executable, str(Path(__file__).resolve()), "--database", str(database), "--clients", str(manifest))
     # Refresh only this disposable VM's permission daemon; preflight verifies grants.
