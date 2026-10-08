@@ -93,6 +93,7 @@ jobs:
           def main():
               proc = gh(
                   'pr', 'list', '--state', 'open', '--author', 'app/dependabot',
+                  '--limit', '500',
                   '--json',
                   'number,isDraft,mergeable,title,body,headRefName,'
                   'headRefOid,isCrossRepository',
