@@ -180,3 +180,60 @@ class Native(unittest.TestCase):
         self.assertEqual(osa(REMINDERS, context_id, "count", ""), "1")
         self.assertEqual(osa(REMINDERS, context_id, "priority", self.token), "0")
         self.assertEqual(self.query("count"), "0")
+
+    def test_focus_timer_start_status_stop_across_processes(self):
+        import json
+        import os
+        import tempfile
+        from pathlib import Path
+        directory = tempfile.TemporaryDirectory(prefix="macgtd-native-focus-")
+        self.addCleanup(directory.cleanup)
+        scripts = ROOT / "workflows/alfred/workflow/scripts"
+        env = dict(os.environ, MACGTD_STATE_DIR=directory.name, MACGTD_SCRIPT_DIR=str(scripts))
+        focus = scripts / "focus_mode.scpt"
+        context = "@"+self.token
+        context_id = osa('''on run argv
+            tell application "Reminders"
+                set fixtureList to make new list with properties {name:(item 1 of argv)}
+                make new reminder at end of reminders of fixtureList with properties {name:(item 2 of argv)}
+                return id of fixtureList
+            end tell
+        end run''', context, self.token)
+        self.addCleanup(osa, '''on run argv
+            tell application "Reminders" to delete list id (item 1 of argv)
+        end run''', context_id)
+        self.addCleanup(command, "osascript", focus, "stop", env=env, check=False)
+        command("osascript", focus, context, "1", env=env)
+        self.assertIn(self.token, command("osascript", focus, "status", env=env)[0])
+        session = json.loads((Path(directory.name) / "focus-session.json").read_text())
+        service = f"gui/{os.getuid()}/{session['jobLabel']}"
+        command("launchctl", "print", service)
+        command("osascript", focus, "stop", env=env)
+        self.assertEqual(command("osascript", focus, "status", env=env)[0], "No active focus session")
+        self.assertNotEqual(command("launchctl", "print", service, check=False)[1], 0)
+
+    def test_library_native_task_dashboard_and_note(self):
+        import tempfile
+        from pathlib import Path
+        directory = tempfile.TemporaryDirectory(prefix="macgtd-native-library-")
+        self.addCleanup(directory.cleanup)
+        compiled = Path(directory.name) / "GTDLib.scpt"
+        command("osacompile", "-o", compiled,
+                ROOT / "workflows/alfred/GTDLib.scptd/Contents/Resources/Scripts/main.scpt")
+        result = osa('''on run argv
+            set libraryObject to load script POSIX file (item 1 of argv)
+            set taskTitle to item 2 of argv
+            set resultInfo to libraryObject's createTask:taskTitle withContext:missing value priority:2 dueDate:missing value
+            set taskIdentifier to id of resultInfo
+            libraryObject's addNote:"O'Brien quoted note" toTask:taskIdentifier toProject:missing value
+            set dashboard to libraryObject's getDashboardData()
+            if inboxCount of dashboard is not 1 then error "Wrong library inbox count"
+            return taskIdentifier
+        end run''', compiled, self.token)
+        self.assertTrue(result)
+        self.assertEqual(self.query("count"), "1")
+        self.assertEqual(self.query("priority", self.token), "5")
+        body = osa('''on run argv
+            tell application "Reminders" to return body of first reminder of list id (item 1 of argv)
+        end run''', self.list_id)
+        self.assertEqual(body, "O'Brien quoted note")

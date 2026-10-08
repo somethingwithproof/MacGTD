@@ -37,7 +37,8 @@ on readState()
     if values is missing value then error "Invalid focus session; state retained for inspection"
     if not (values's isKindOfClass:(current application's NSDictionary)) then error "Invalid focus session"
     repeat with keyName in {"sessionId", "context", "task", "taskId", "listId", "startTime", "endTime", "duration", "timerScheduled", "jobLabel"}
-        if values's objectForKey:(keyName as text) is missing value then error "Incomplete focus session"
+        set requiredValue to values's objectForKey:(keyName as text)
+        if requiredValue is missing value then error "Incomplete focus session: " & keyName
     end repeat
     return values
 end readState
@@ -89,12 +90,13 @@ on logFocusEvent(eventType, values)
     set filePath to my ensureDirectory() & "/focus_log.jsonl"
     set manager to current application's NSFileManager's defaultManager()
     if not (manager's fileExistsAtPath:filePath) then
-        manager's createFileAtPath:filePath |contents|:(current application's NSData's data()) attributes:{NSFilePosixPermissions:384}
+        manager's createFileAtPath:filePath |contents|:(current application's NSData's |data|()) attributes:{NSFilePosixPermissions:384}
     end if
     set handle to current application's NSFileHandle's fileHandleForWritingAtPath:filePath
     if handle is missing value then error "Cannot open focus log"
     handle's seekToEndOfFile()
-    handle's writeData:((current application's NSString's stringWithString:lineText)'s dataUsingEncoding:(current application's NSUTF8StringEncoding))
+    set lineData to (current application's NSString's stringWithString:lineText)'s dataUsingEncoding:(current application's NSUTF8StringEncoding)
+    handle's writeData:lineData
     handle's closeFile()
 end logFocusEvent
 on startFocusWithTask(contextName, taskTitle, taskIdentifier, listIdentifier, durationMinutes)
