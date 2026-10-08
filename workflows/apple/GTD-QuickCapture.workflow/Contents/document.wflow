@@ -251,7 +251,12 @@ on findPattern(theText, thePattern)
 end findPattern
 
 on removePattern(theText, patternText)
-    return ((current application's NSString's stringWithString:theText)'s stringByReplacingOccurrencesOfString:patternText withString:" ") as text
+    set valueString to current application's NSString's stringWithString:theText
+    set escapedMarker to current application's NSRegularExpression's escapedPatternForString:patternText
+    set expression to current application's NSRegularExpression's regularExpressionWithPattern:("(?&lt;!\\S)" &amp; (escapedMarker as text) &amp; "(?=\\s|$)") options:0 |error|:(missing value)
+    set found to expression's firstMatchInString:valueString options:0 range:{0, valueString's |length|()}
+    if found is missing value then return theText
+    return (valueString's stringByReplacingCharactersInRange:(found's range()) withString:" ") as text
 end removePattern
 
 on trimText(theText)

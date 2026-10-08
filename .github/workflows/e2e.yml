@@ -14,6 +14,10 @@ on:
         default: automator
         type: choice
         options: [automator]
+      test_filter:
+        description: Optional test ID substring for diagnosis (blank runs all native tests)
+        type: string
+        default: ''
   schedule:
     - cron: '23 10 * * *'
 
@@ -25,12 +29,10 @@ jobs:
     name: E2E (${{ inputs.test_suite || 'automator' }})
     runs-on: macos-15-intel
     timeout-minutes: 30
-    concurrency:
-      group: macgtd-desktop-e2e
-      cancel-in-progress: false
     env:
       MACGTD_E2E_DEDICATED: '1'
       TEST_SUITE: ${{ inputs.test_suite || 'automator' }}
+      TEST_FILTER: ${{ inputs.test_filter || '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -44,7 +46,7 @@ jobs:
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: mise exec -- python scripts/prepare-hosted-macos.py
       - name: Run selected end-to-end suite
-        run: mise exec -- python tests/run.py "$TEST_SUITE"
+        run: mise exec -- python tests/run.py "$TEST_SUITE" --filter "$TEST_FILTER"
       - name: Upload E2E reports, logs, and tested package
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

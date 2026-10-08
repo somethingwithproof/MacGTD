@@ -36,6 +36,8 @@ jobs:
           find scripts tests workflows infra -name '*.sh' -print0 | xargs -0 shellcheck
       - name: Validate, test production parser, and verify packaged workflow
         run: mise exec -- python tests/run.py validation
+      - name: Build the compiled native library
+        run: ./scripts/build-gtdlib.sh
       - name: Upload validation reports and package
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -44,6 +46,7 @@ jobs:
           path: |
             test-results/
             dist/MacGTD.alfredworkflow
+            dist/GTDLib.scptd/
           if-no-files-found: error
           retention-days: 14
 
