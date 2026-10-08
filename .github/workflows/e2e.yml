@@ -30,7 +30,6 @@ jobs:
       cancel-in-progress: false
     env:
       MACGTD_E2E_DEDICATED: '1'
-      RUNNER_ENVIRONMENT: ${{ runner.environment }}
       TEST_SUITE: ${{ inputs.test_suite || 'automator' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -41,6 +40,8 @@ jobs:
           brew install mise
           mise install
       - name: Provision the ephemeral macOS test desktop
+        env:
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: mise exec -- python scripts/prepare-hosted-macos.py
       - name: Run selected end-to-end suite
         run: mise exec -- python tests/run.py "$TEST_SUITE"
