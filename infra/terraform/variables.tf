@@ -36,7 +36,7 @@ variable "github_runner_token" {
 variable "github_repo" {
   description = "GitHub repository (owner/repo)"
   type        = string
-  default     = "thomasvincent/MacGTD"
+  default     = "somethingwithproof/MacGTD"
 }
 
 variable "alfred_powerpack_license" {

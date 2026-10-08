@@ -51,7 +51,12 @@
 				<key>ActionParameters</key>
 				<dict>
 					<key>source</key>
-					<string>on run {input, parameters}
+					<string>use AppleScript version "2.4"
+use scripting additions
+use framework "Foundation"
+property curlExecutable : "/usr/bin/curl"
+
+on run {input, parameters}
 	set taskTitle to "Notion GTD Quick Capture"
 
 	-- Get API token and database ID from Keychain
@@ -98,7 +103,7 @@
 			set AppleScript's text item delimiters to "due:"
 			set parts to text items of taskText
 			if (count of parts) &gt; 1 then
-				set dateStr to word 1 of item 2 of parts
+				set dateStr to my firstToken(item 2 of parts)
 				if dateStr contains "-" then
 					set dueISO to dateStr
 					set taskText to my replaceText(taskText, "due:" &amp; dateStr, "")
@@ -110,28 +115,24 @@
 
 	set taskText to my trimText(taskText)
 
-	-- Build Notion API payload
-	set jsonBody to "{\"parent\":{\"database_id\":\"" &amp; dbID &amp; "\"},\"properties\":{\"Name\":{\"title\":[{\"text\":{\"content\":\"" &amp; my escapeJSON(taskText) &amp; "\"}}]},\"Status\":{\"select\":{\"name\":\"Inbox\"}}"
-	if priorityLabel is not "None" then
-		set jsonBody to jsonBody &amp; ",\"Priority\":{\"select\":{\"name\":\"" &amp; priorityLabel &amp; "\"}}"
-	end if
-	if dueISO is not "" then
-		set jsonBody to jsonBody &amp; ",\"Due\":{\"date\":{\"start\":\"" &amp; dueISO &amp; "\"}}"
-	end if
-	set jsonBody to jsonBody &amp; "}}"
+    set titleValue to current application's NSDictionary's dictionaryWithDictionary:{title:{{|text|:{content:taskText}}}}
+    set propertiesObject to current application's NSMutableDictionary's dictionaryWithDictionary:{Name:titleValue, |Status|:{|select|:{name:"Inbox"}}}
+    if priorityLabel is not "None" then propertiesObject's setObject:(current application's NSDictionary's dictionaryWithDictionary:{|select|:{name:priorityLabel}}) forKey:"Priority"
+    if dueISO is not "" then propertiesObject's setObject:(current application's NSDictionary's dictionaryWithDictionary:{|date|:{start:dueISO}}) forKey:"Due"
+    set payload to current application's NSDictionary's dictionaryWithDictionary:{parent:{database_id:dbID}, |properties|:propertiesObject}
+    set jsonBody to my serializeJSON(payload)
 
 	-- Make API call
 	try
-		set curlCmd to "curl -s -X POST 'https://api.notion.com/v1/pages' -H 'Authorization: Bearer " &amp; apiToken &amp; "' -H 'Notion-Version: 2022-06-28' -H 'Content-Type: application/json' -d '" &amp; jsonBody &amp; "'"
-		set apiResult to do shell script curlCmd
+		set apiResult to my requestPayload(apiToken, jsonBody)
 
-		if apiResult contains "\"id\"" then
+		if my confirmedResponse(apiResult) then
 			display notification "Task added to Notion: " &amp; taskText with title taskTitle
 		else
-			display notification "Error adding to Notion. Check setup." with title taskTitle
+			error "Notion did not confirm page creation"
 		end if
 	on error errMsg
-		display notification "API error: " &amp; errMsg with title taskTitle
+		error (my failureMessage(errMsg, apiToken))
 	end try
 
 	return input
@@ -176,7 +177,53 @@ on escapeJSON(theText)
 	set theText to my replaceText(theText, "\"", "\\\"")
 	set theText to my replaceText(theText, return, "\\n")
 	return theText
-end escapeJSON</string>
+end escapeJSON
+
+-- Parse command syntax independently of language-specific word boundaries.
+on tokens(theText)
+    set oldDelimiters to AppleScript's text item delimiters
+    set AppleScript's text item delimiters to {space, tab, return, linefeed}
+    set resultTokens to text items of theText
+    set AppleScript's text item delimiters to oldDelimiters
+    return resultTokens
+end tokens
+
+on firstToken(theText)
+    repeat with tokenValue in my tokens(theText)
+        if tokenValue as text is not "" then return tokenValue as text
+    end repeat
+    return ""
+end firstToken
+
+on serializeJSON(values)
+    set dataObject to current application's NSJSONSerialization's dataWithJSONObject:values options:0 |error|:(missing value)
+    if dataObject is missing value then error "Cannot serialize capture payload"
+    return ((current application's NSString's alloc()'s initWithData:dataObject encoding:(current application's NSUTF8StringEncoding))) as text
+end serializeJSON
+on confirmedResponse(responseText)
+    set dataObject to (current application's NSString's stringWithString:responseText)'s dataUsingEncoding:(current application's NSUTF8StringEncoding)
+    set responseObject to current application's NSJSONSerialization's JSONObjectWithData:dataObject options:0 |error|:(missing value)
+    if responseObject is missing value then return false
+    if not (responseObject's isKindOfClass:(current application's NSDictionary)) then return false
+    set identifier to responseObject's objectForKey:"id"
+    if identifier is missing value then return false
+    set failureCode to responseObject's objectForKey:"error"
+    if failureCode is not missing value then return false
+    if (responseObject's objectForKey:"object") as text is not "page" then return false
+    if (responseObject's objectForKey:"properties") is missing value then return false
+    return (identifier as text) is not ""
+end confirmedResponse
+on requestPayload(apiToken, jsonBody)
+    set curlCmd to quoted form of curlExecutable &amp; " --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 -X POST " &amp; quoted form of "https://api.notion.com/v1/pages" &amp; " -H " &amp; quoted form of ("Authorization: Bearer " &amp; apiToken) &amp; " -H " &amp; quoted form of "Content-Type: application/json" &amp; " -H " &amp; quoted form of "Notion-Version: 2022-06-28" &amp; " --data-binary " &amp; quoted form of jsonBody
+    return do shell script curlCmd
+end requestPayload
+
+on failureMessage(messageText, apiToken)
+    set safeMessage to current application's NSString's stringWithString:messageText
+    if apiToken is not "" then set safeMessage to safeMessage's stringByReplacingOccurrencesOfString:apiToken withString:"[redacted]"
+    return "Capture API request failed: " &amp; (safeMessage as text)
+end failureMessage
+</string>
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>

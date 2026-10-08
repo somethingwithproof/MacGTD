@@ -126,7 +126,7 @@
 		set newTasks to text returned of result
 		if newTasks is not "" then
 			set AppleScript's text item delimiters to return
-			set taskLines to text items of newTasks
+			set taskLines to paragraphs of newTasks
 			set AppleScript's text item delimiters to ""
 
 			set addedCount to 0

@@ -65,7 +65,7 @@
 
 	-- Split by line
 	set AppleScript's text item delimiters to return
-	set taskLines to text items of taskBlock
+	set taskLines to paragraphs of taskBlock
 	set AppleScript's text item delimiters to ""
 
 	set addedCount to 0

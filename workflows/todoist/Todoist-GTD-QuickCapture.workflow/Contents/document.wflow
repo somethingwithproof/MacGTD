@@ -51,7 +51,12 @@
 				<key>ActionParameters</key>
 				<dict>
 					<key>source</key>
-					<string>on run {input, parameters}
+					<string>use AppleScript version "2.4"
+use scripting additions
+use framework "Foundation"
+property curlExecutable : "/usr/bin/curl"
+
+on run {input, parameters}
 	set taskTitle to "Todoist GTD Quick Capture"
 
 	-- Get API token from Keychain
@@ -104,7 +109,7 @@
 			set AppleScript's text item delimiters to "due:"
 			set parts to text items of taskText
 			if (count of parts) &gt; 1 then
-				set dateStr to word 1 of item 2 of parts
+				set dateStr to my firstToken(item 2 of parts)
 				if dateStr contains "-" then
 					set dueString to dateStr
 					set taskText to my replaceText(taskText, "due:" &amp; dateStr, "")
@@ -116,8 +121,8 @@
 
 	-- Parse labels (@label)
 	set labelName to ""
-	set words to every word of taskText
-	repeat with w in words
+	set markerTokens to my tokens(taskText)
+	repeat with w in markerTokens
 		if (w as text) starts with "@" then
 			set labelName to text 2 thru -1 of (w as text)
 			set taskText to my replaceText(taskText, w as text, "")
@@ -127,8 +132,8 @@
 
 	-- Parse project (+project) — stored in task content for now
 	set projectName to ""
-	set words to every word of taskText
-	repeat with w in words
+	set markerTokens to my tokens(taskText)
+	repeat with w in markerTokens
 		if (w as text) starts with "+" then
 			set projectName to text 2 thru -1 of (w as text)
 			set taskText to my replaceText(taskText, w as text, "")
@@ -138,31 +143,25 @@
 
 	set taskText to my trimText(taskText)
 
-	-- Build JSON payload
-	set jsonBody to "{\"content\":\"" &amp; my escapeJSON(taskText) &amp; "\",\"priority\":" &amp; todoPriority
-	if dueString is not "" then
-		set jsonBody to jsonBody &amp; ",\"due_string\":\"" &amp; dueString &amp; "\""
-	end if
-	if labelName is not "" then
-		set jsonBody to jsonBody &amp; ",\"labels\":[\"" &amp; labelName &amp; "\"]"
-	end if
-	set jsonBody to jsonBody &amp; "}"
+    set payload to current application's NSMutableDictionary's dictionaryWithDictionary:{content:taskText, priority:todoPriority}
+    if dueString is not "" then payload's setObject:dueString forKey:"due_string"
+    if labelName is not "" then payload's setObject:(current application's NSArray's arrayWithObject:labelName) forKey:"labels"
+    set jsonBody to my serializeJSON(payload)
 
 	-- Make API call
 	try
-		set curlCmd to "curl -s -X POST 'https://api.todoist.com/rest/v2/tasks' -H 'Authorization: Bearer " &amp; apiToken &amp; "' -H 'Content-Type: application/json' -d '" &amp; jsonBody &amp; "'"
-		set apiResult to do shell script curlCmd
+		set apiResult to my requestPayload(apiToken, jsonBody)
 
-		if apiResult contains "\"id\"" then
+		if my confirmedResponse(apiResult) then
 			set notifyMsg to "Task added to Todoist: " &amp; taskText
 			if todoPriority &gt; 1 then set notifyMsg to notifyMsg &amp; " (priority set)"
 			if dueString is not "" then set notifyMsg to notifyMsg &amp; " (due: " &amp; dueString &amp; ")"
 			display notification notifyMsg with title taskTitle
 		else
-			display notification "Error adding task. Check API token." with title taskTitle
+			error "Todoist did not confirm task creation"
 		end if
 	on error errMsg
-		display notification "API error: " &amp; errMsg with title taskTitle
+		error (my failureMessage(errMsg, apiToken))
 	end try
 
 	return input
@@ -207,7 +206,52 @@ on escapeJSON(theText)
 	set theText to my replaceText(theText, "\"", "\\\"")
 	set theText to my replaceText(theText, return, "\\n")
 	return theText
-end escapeJSON</string>
+end escapeJSON
+
+-- Parse command syntax independently of language-specific word boundaries.
+on tokens(theText)
+    set oldDelimiters to AppleScript's text item delimiters
+    set AppleScript's text item delimiters to {space, tab, return, linefeed}
+    set resultTokens to text items of theText
+    set AppleScript's text item delimiters to oldDelimiters
+    return resultTokens
+end tokens
+
+on firstToken(theText)
+    repeat with tokenValue in my tokens(theText)
+        if tokenValue as text is not "" then return tokenValue as text
+    end repeat
+    return ""
+end firstToken
+
+on serializeJSON(values)
+    set dataObject to current application's NSJSONSerialization's dataWithJSONObject:values options:0 |error|:(missing value)
+    if dataObject is missing value then error "Cannot serialize capture payload"
+    return ((current application's NSString's alloc()'s initWithData:dataObject encoding:(current application's NSUTF8StringEncoding))) as text
+end serializeJSON
+on confirmedResponse(responseText)
+    set dataObject to (current application's NSString's stringWithString:responseText)'s dataUsingEncoding:(current application's NSUTF8StringEncoding)
+    set responseObject to current application's NSJSONSerialization's JSONObjectWithData:dataObject options:0 |error|:(missing value)
+    if responseObject is missing value then return false
+    if not (responseObject's isKindOfClass:(current application's NSDictionary)) then return false
+    set identifier to responseObject's objectForKey:"id"
+    if identifier is missing value then return false
+    set failureCode to responseObject's objectForKey:"error"
+    if failureCode is not missing value then return false
+    if (responseObject's objectForKey:"content") is missing value then return false
+    return (identifier as text) is not ""
+end confirmedResponse
+on requestPayload(apiToken, jsonBody)
+    set curlCmd to quoted form of curlExecutable &amp; " --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 -X POST " &amp; quoted form of "https://api.todoist.com/api/v1/tasks" &amp; " -H " &amp; quoted form of ("Authorization: Bearer " &amp; apiToken) &amp; " -H " &amp; quoted form of "Content-Type: application/json" &amp; " --data-binary " &amp; quoted form of jsonBody
+    return do shell script curlCmd
+end requestPayload
+
+on failureMessage(messageText, apiToken)
+    set safeMessage to current application's NSString's stringWithString:messageText
+    if apiToken is not "" then set safeMessage to safeMessage's stringByReplacingOccurrencesOfString:apiToken withString:"[redacted]"
+    return "Capture API request failed: " &amp; (safeMessage as text)
+end failureMessage
+</string>
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>

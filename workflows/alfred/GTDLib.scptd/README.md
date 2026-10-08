@@ -2,22 +2,21 @@
 
 Project overview and status: [MacGTD](../../../README.md).
 
-This bundle contains a compiled AppleScript and a scripting dictionary for task creation, dashboard data, and focus-session operations.
+GTDLib provides native Reminders task creation, dashboard counts, notes, inbox review, and access to the companion focus controller. Its scripting dictionary and compiled implementation expose the same public operations.
 
-## Contents and interface
+## Build and interface
 
-- [Info.plist](Contents/Info.plist) identifies the script bundle.
-- [GTDLib.sdef](Contents/Resources/GTDLib.sdef) declares the scripting terminology.
-- [main.scpt](Contents/Resources/Scripts/main.scpt) contains the compiled implementation.
-
-Inspect the actual implementation from macOS with:
+The editable source is [main.applescript](Contents/Resources/Scripts/main.applescript). The bundle also includes a compiled `main.scpt`, `Info.plist`, and `GTDLib.sdef`.
 
 ```bash
-osadecompile workflows/alfred/GTDLib.scptd/Contents/Resources/Scripts/main.scpt
+./scripts/build-gtdlib.sh
+# Output: dist/GTDLib.scptd
 ```
 
-The decompiled script includes task creation, dashboard, focus-session, input-validation, logging, and notification handlers. It also references helper/service behavior whose availability must be verified before treating the bundle as a complete working library. Dictionary entries alone do not establish implemented handlers.
+Load the compiled bundle with AppleScript `load script`, then call `createTask:withContext:priority:dueDate:`, `getDashboardData()`, `addNote:toTask:toProject:`, `processInbox()`, or `startFocusSession:duration:`. Priorities 1, 2, and 3 map to Reminders priorities 1, 5, and 9. Task creation returns a record with the reminder identifier. Dashboard counts come directly from Reminders; inbox review opens the list for the user and returns its pending count.
 
-## Integration limits
+## Requirements and limits
 
-The previous guide referred to a root `install-gtdlib.sh` that is absent from this checkout. Installation and application-backend behavior need verification against the surrounding Alfred workflow and the user's macOS environment. No claim of complete backend compatibility, security certification, or measured caching performance is made here.
+Reminders must be configured and Automation permission granted. The library supports native Reminders; unsupported service selection raises an error. Focus operations require the companion Alfred scripts, selected explicitly with `MACGTD_SCRIPT_DIR` or the library’s `runtimeScriptsPath` property. Standalone focus calls fail with configuration guidance when neither is supplied. No external backend, caching performance, or security certification is implied by the scripting dictionary.
+
+Hosted validation checks source compilation and shipped bundle loading. Native E2E verifies task creation, priority, dashboard count, and note persistence against Reminders.

@@ -79,6 +79,7 @@
 	end if
 
 	set taskText to my trimText(taskText)
+    if taskText is "" then return input
 
 	-- Add to Reminders
 	tell application "Reminders"

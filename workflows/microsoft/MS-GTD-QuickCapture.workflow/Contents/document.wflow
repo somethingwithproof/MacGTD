@@ -285,7 +285,6 @@ on toHex(theNum)
 	end repeat
 	return theHex
 end toHex</string>
-
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>

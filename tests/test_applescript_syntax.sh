@@ -1,72 +1,36 @@
 #!/bin/bash
 set -euo pipefail
-
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-PASSED=0
-FAILED=0
-
-section() {
-    local title="$1"
-    echo -e "\n${YELLOW}${title}${NC}"
-    return 0
-}
-
-pass() {
-    local message="$1"
-    echo -e "  ${GREEN}✓${NC} ${message}"
-    PASSED=$((PASSED + 1))
-    return 0
-}
-
-fail() {
-    local message="$1"
-    echo -e "  ${RED}✗${NC} ${message}"
-    FAILED=$((FAILED + 1))
-    return 0
-}
-
-section "AppleScript Syntax Validation"
-
-# Find all .scpt files and validate with osacompile
-while IFS= read -r script; do
-    if osacompile -o /dev/null "$script" 2>/dev/null; then
-        pass "$(basename "$script") - valid syntax"
+cd "$(dirname "$0")/.."
+TEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/macgtd-syntax.XXXXXX")
+trap 'rm -rf "$TEST_DIR"' EXIT
+passed=0
+failed=0
+compile() {
+    local source_path="$1"
+    local display_name="$2"
+    if osacompile -o "$TEST_DIR/compiled.scpt" "$source_path" > "$TEST_DIR/output.log" 2>&1; then
+        echo "PASS: $display_name"
+        passed=$((passed + 1))
     else
-        fail "$(basename "$script") - syntax error"
-        osacompile -o /dev/null "$script" 2>&1 | sed 's/^/    /'
+        echo "FAIL: $display_name"
+        cat "$TEST_DIR/output.log"
+        failed=$((failed + 1))
     fi
-done < <(find workflows/alfred -name "*.scpt" -type f)
-
-section "Automator Workflow Validation"
-
-# Extract and compile embedded AppleScripts from .workflow bundles
+}
+while IFS= read -r -d '' script; do
+    compile "$script" "$script"
+done < <(find workflows/alfred -name '*.scpt' -type f -print0)
 for workflow in workflows/*/*.workflow; do
-    wflow_file="$workflow/Contents/document.wflow"
-    if [[ -f "$wflow_file" ]]; then
-        # Extract AppleScript source using PlistBuddy or plutil
-        if plutil -extract 'actions.0.action.ActionParameters.source' raw "$wflow_file" > /tmp/extracted.applescript 2>/dev/null; then
-            if osacompile -o /dev/null /tmp/extracted.applescript 2>/dev/null; then
-                pass "$(basename "$workflow") - embedded script valid"
-            else
-                fail "$(basename "$workflow") - embedded script has syntax errors"
-                osacompile -o /dev/null /tmp/extracted.applescript 2>&1 | sed 's/^/    /'
-            fi
-            rm -f /tmp/extracted.applescript
-        else
-            fail "$(basename "$workflow") - could not extract embedded script"
-        fi
+    index=0
+    while plutil -extract "actions.$index.action.ActionParameters.source" raw \
+        "$workflow/Contents/document.wflow" > "$TEST_DIR/source.applescript" 2>/dev/null; do
+        compile "$TEST_DIR/source.applescript" "$workflow action $index"
+        index=$((index + 1))
+    done
+    if [[ "$index" -eq 0 ]]; then
+        echo "FAIL: No AppleScript action in $workflow"
+        failed=$((failed + 1))
     fi
 done
-
-# Summary
-TOTAL=$((PASSED + FAILED))
-echo -e "\n${YELLOW}Syntax Validation: ${PASSED}/${TOTAL} passed${NC}"
-
-if [[ "$FAILED" -gt 0 ]]; then
-    echo -e "${RED}${FAILED} script(s) failed${NC}"
-    exit 1
-fi
+echo "Syntax checks: $passed passed, $failed failed"
+[[ "$passed" -gt 0 && "$failed" -eq 0 ]]

@@ -6,9 +6,10 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 SEPARATOR="============================================"
+readonly HTTPS_PROTOCOL="=https"
 
 RUNNER_DIR="$HOME/actions-runner"
-REPO="thomasvincent/MacGTD"
+REPO="${MACGTD_GITHUB_REPO:-somethingwithproof/MacGTD}"
 
 info() {
     local message="$1"
@@ -48,10 +49,11 @@ info "macOS $SW_VERS"
 # Homebrew
 if ! command -v brew &>/dev/null; then
     warn "Homebrew not found. Installing..."
-    NONINTERACTIVE=1 /bin/bash -c "$(curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    NONINTERACTIVE=1 /bin/bash -c "$(curl --proto "$HTTPS_PROTOCOL" --proto-redir "$HTTPS_PROTOCOL" --tlsv1.2 -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 info "Homebrew installed"
+brew install mise
 
 # --- Install Alfred ---
 if ! ls /Applications/Alfred*.app &>/dev/null; then
@@ -69,7 +71,7 @@ echo "  https://github.com/$REPO/settings/actions/runners/new"
 echo ""
 echo "  Or run: gh api repos/$REPO/actions/runners/registration-token --jq .token"
 echo ""
-read -rp "Enter runner registration token: " RUNNER_TOKEN
+read -rsp "Enter runner registration token: " RUNNER_TOKEN
 
 if [[ -z "$RUNNER_TOKEN" ]]; then
     error "Token is required"
@@ -88,8 +90,8 @@ else
     RUNNER_ARCH="x64"
 fi
 
-RUNNER_VERSION=$(curl --proto '=https' --tlsv1.2 -s https://api.github.com/repos/actions/runner/releases/latest | grep tag_name | cut -d'"' -f4 | sed 's/v//')
-curl --proto '=https' --tlsv1.2 -o actions-runner.tar.gz -L "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-osx-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz"
+RUNNER_VERSION=$(curl --proto "$HTTPS_PROTOCOL" --proto-redir "$HTTPS_PROTOCOL" --tlsv1.2 -s https://api.github.com/repos/actions/runner/releases/latest | grep tag_name | cut -d'"' -f4 | sed 's/v//')
+curl --proto "$HTTPS_PROTOCOL" --proto-redir "$HTTPS_PROTOCOL" --tlsv1.2 -o actions-runner.tar.gz -L "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-osx-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz"
 tar xzf actions-runner.tar.gz
 rm actions-runner.tar.gz
 
@@ -101,22 +103,9 @@ rm actions-runner.tar.gz
     --unattended \
     --replace
 
-# --- Grant TCC permissions ---
-info "Granting accessibility permissions..."
-warn "This requires sudo access."
-
-TCC_DB="/Library/Application Support/com.apple.TCC/TCC.db"
-
-# Grant accessibility to key apps
-for client in "com.runningwithcrayons.Alfred" "com.apple.Terminal" "com.googlecode.iterm2"; do
-    sudo sqlite3 "$TCC_DB" \
-        "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags) VALUES ('kTCCServiceAccessibility', '$client', 0, 2, 0, 1, 0);" 2>/dev/null || true
-done
-
-for client_path in "/usr/bin/osascript" "$RUNNER_DIR/bin/Runner.Worker"; do
-    sudo sqlite3 "$TCC_DB" \
-        "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags) VALUES ('kTCCServiceAccessibility', '$client_path', 1, 2, 0, 1, 0);" 2>/dev/null || true
-done
+# Provision OS permissions interactively for this logged-in account.
+warn "Grant Accessibility and Automation permissions in System Settings for the runner."
+warn "Do not edit TCC.db: permission failures must be visible, not silently ignored."
 
 # --- Install as launchd service ---
 info "Installing launchd service..."
