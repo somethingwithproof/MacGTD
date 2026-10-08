@@ -116,3 +116,49 @@ class Components(unittest.TestCase):
         rendered.write_text(source)
         command("bash", "-n", rendered)
         command("shellcheck", rendered)
+
+    def test_api_transport_preserves_json_as_one_argument(self):
+        import sys
+        curl = self.path / "fixture-curl"
+        captured = self.path / "argv.json"
+        response = {"id": "fixture-id", "content": "fixture-task", "object": "page", "properties": {}}
+        curl.write_text("#!"+sys.executable+"\nimport json,sys\nfrom pathlib import Path\n"
+                        +"Path("+repr(str(captured))+").write_text(json.dumps(sys.argv[1:]))\n"
+                        +"print("+repr(json.dumps(response))+")\n")
+        curl.chmod(0o755)
+        payload = json.dumps({"content": 'O\'Brien "quoted" café\nsecond line'})
+        for platform in ("todoist", "notion"):
+            with self.subTest(platform=platform):
+                bundle = next((ROOT / "workflows" / platform).glob("*.workflow"))
+                source = plistlib.loads((bundle / "Contents/document.wflow").read_bytes())["actions"][0]["action"]["ActionParameters"]["source"]
+                path = self.path / (platform+".applescript")
+                path.write_text(source)
+                compiled = self.path / (platform+".scpt")
+                command("osacompile", "-o", compiled, path)
+                result = osa('''on run argv
+                    set workflowAction to load script POSIX file (item 1 of argv)
+                    set curlExecutable of workflowAction to item 2 of argv
+                    set responseText to workflowAction's requestPayload("fixture-token", item 3 of argv)
+                    if not workflowAction's confirmedResponse(responseText) then error "Valid fixture response rejected"
+                    if workflowAction's confirmedResponse(item 4 of argv) then error "Error response accepted"
+                    return responseText
+                end run''', compiled, curl, payload, json.dumps({"id": "request-id", "object": "error"}))
+                self.assertEqual(json.loads(result)["id"], "fixture-id")
+                arguments = json.loads(captured.read_text())
+                self.assertEqual(arguments[arguments.index("--data-binary")+1], payload)
+                self.assertIn("Authorization: Bearer fixture-token", arguments)
+                self.assertEqual(arguments.count(payload), 1)
+
+    def test_library_initialization_and_title_preservation(self):
+        compiled = self.path / "GTDLib.scpt"
+        command("osacompile", "-o", compiled,
+                ROOT / "workflows/alfred/GTDLib.scptd/Contents/Resources/Scripts/main.scpt")
+        value = 'O\'Brien "quoted" café'
+        result = osa('''on run argv
+            set libraryObject to load script POSIX file (item 1 of argv)
+            libraryObject's _initialize()
+            if libraryObject's mappedPriority(2) is not 5 then error "Wrong priority mapping"
+            if libraryObject's mappedPriority(3) is not 9 then error "Wrong priority mapping"
+            return libraryObject's _sanitizeString(item 2 of argv)
+        end run''', compiled, value)
+        self.assertEqual(result, value)

@@ -14,9 +14,9 @@ on analyzeFocusData()
     set longestSeconds to 0
     set completedIds to {}
     if current application's NSFileManager's defaultManager()'s fileExistsAtPath:filePath then
-        set contents to current application's NSString's stringWithContentsOfFile:filePath encoding:(current application's NSUTF8StringEncoding) |error|:(missing value)
-        if contents is missing value then error "Focus log is unreadable"
-        repeat with lineText in (contents's componentsSeparatedByString:linefeed as list)
+        set logContents to current application's NSString's stringWithContentsOfFile:filePath encoding:(current application's NSUTF8StringEncoding) |error|:(missing value)
+        if logContents is missing value then error "Focus log is unreadable"
+        repeat with lineText in (logContents's componentsSeparatedByString:linefeed as list)
             if lineText as text is not "" then
                 set dataObject to (current application's NSString's stringWithString:lineText)'s dataUsingEncoding:(current application's NSUTF8StringEncoding)
                 set entry to current application's NSJSONSerialization's JSONObjectWithData:dataObject options:0 |error|:(missing value)

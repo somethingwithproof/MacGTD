@@ -55,6 +55,7 @@ class Report(unittest.TextTestResult):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("suite", choices=("validation", "all", "alfred", "automator"))
+    parser.add_argument("--filter", help="Run tests whose IDs contain this text")
     args = parser.parse_args()
     os.chdir(ROOT)
     results = ROOT / "test-results"
@@ -65,6 +66,14 @@ def main():
     if args.suite in ("all", "alfred"):
         modules += ["support.test_alfred"]
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromName(m) for m in modules)
+    if args.filter:
+        def flatten(items):
+            for item in items:
+                if isinstance(item, unittest.TestSuite):
+                    yield from flatten(item)
+                else:
+                    yield item
+        suite = unittest.TestSuite(test for test in flatten(suite) if args.filter in test.id())
     result = unittest.TextTestRunner(verbosity=2, resultclass=Report).run(suite)
     # Class setup/teardown errors aren't passed to startTest/stopTest by unittest.
     recorded = {c.get("name") for c in result.xml}

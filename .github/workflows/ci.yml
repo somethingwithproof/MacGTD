@@ -48,7 +48,7 @@ jobs:
           retention-days: 14
 
   e2e:
-    name: Native and Alfred E2E
+    name: Native macOS E2E
     needs: validate
     uses: ./.github/workflows/e2e.yml
     with:

@@ -209,6 +209,8 @@ on confirmedResponse(responseText)
     if identifier is missing value then return false
     set failureCode to responseObject's objectForKey:"error"
     if failureCode is not missing value then return false
+    if (responseObject's objectForKey:"object") as text is not "page" then return false
+    if (responseObject's objectForKey:"properties") is missing value then return false
     return (identifier as text) is not ""
 end confirmedResponse
 on requestPayload(apiToken, jsonBody)
