@@ -152,7 +152,7 @@ class Components(unittest.TestCase):
     def test_library_initialization_and_title_preservation(self):
         compiled = self.path / "GTDLib.scpt"
         command("osacompile", "-o", compiled,
-                ROOT / "workflows/alfred/GTDLib.scptd/Contents/Resources/Scripts/main.scpt")
+                ROOT / "workflows/alfred/GTDLib.scptd/Contents/Resources/Scripts/main.applescript")
         value = 'O\'Brien "quoted" café'
         result = osa('''on run argv
             set libraryObject to load script POSIX file (item 1 of argv)
@@ -162,3 +162,12 @@ class Components(unittest.TestCase):
             return libraryObject's _sanitizeString(item 2 of argv)
         end run''', compiled, value)
         self.assertEqual(result, value)
+
+    def test_shipped_library_bundle_loads(self):
+        bundle = ROOT / "workflows/alfred/GTDLib.scptd"
+        result = osa('''on run argv
+            set libraryObject to load script POSIX file (item 1 of argv)
+            libraryObject's _initialize()
+            return libraryObject's _sanitizeString("O'Brien")
+        end run''', bundle)
+        self.assertEqual(result, "O'Brien")

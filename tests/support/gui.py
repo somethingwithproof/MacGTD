@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import uuid
 
-from support.common import RESULTS, osa
+from support.common import RESULTS, osa, command
 
 
 @contextmanager
@@ -35,6 +35,8 @@ def dialog(text=None, button="OK", expected="", step=""):
         tell application "System Events"
             repeat 120 times
                 repeat with p in (application processes whose name is "Automator Runner" or name is "automator" or name is "Automator")
+                    with timeout of 2 seconds
+                    try
                     tell p
                         repeat with w in windows
                             if name of w is expectedTitle then
@@ -48,6 +50,8 @@ def dialog(text=None, button="OK", expected="", step=""):
                             end if
                         end repeat
                     end tell
+                    end try
+                    end timeout
                 end repeat
                 delay 0.25
             end repeat
@@ -67,6 +71,26 @@ def workflow(source, responses=(), cancel=False):
             code = process.wait(timeout=90)
             if code and not cancel:
                 raise AssertionError(f"Automator failed ({code}); see test-results/automator.log")
+        except Exception:
+            command("/usr/sbin/screencapture", "-x", RESULTS / "desktop-failure.png", check=False, timeout=5)
+            command("ps", "-axo", "pid,ppid,comm", check=False)
+            try:
+                osa('''tell application "System Events"
+                    set resultText to ""
+                    repeat with p in application processes
+                        with timeout of 2 seconds
+                            try
+                                set resultText to resultText & (name of p) & ": " & (name of every window of p as text) & return
+                            on error msg
+                                set resultText to resultText & (name of p) & ": " & msg & return
+                            end try
+                        end timeout
+                    end repeat
+                    return resultText
+                end tell''', timeout=20)
+            except AssertionError:
+                pass
+            raise
         finally:
             if process.poll() is None:
                 os.killpg(process.pid, signal.SIGKILL)

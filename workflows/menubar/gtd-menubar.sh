@@ -42,7 +42,7 @@ tell application "Reminders"
     return output
 end tell
 ' 2>/dev/null | while IFS= read -r line; do
-    [[ -n "$line" ]] && echo "$line"
+    if [[ -n "$line" ]]; then echo "$line"; fi
 done
 
 echo "---"

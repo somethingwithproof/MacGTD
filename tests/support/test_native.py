@@ -142,9 +142,9 @@ class Native(unittest.TestCase):
 
     def test_calendar_capture_duration_location_and_date(self):
         # Capture targets the first calendar. Inspect it without changing user calendars.
-        calendar_id = osa('tell application "Calendar" to return id of first calendar whose writable is true')
+        calendar_id = osa('tell application "Calendar" to return calendarIdentifier of first calendar whose writable is true')
         self.addCleanup(osa, '''on run argv
-            tell application "Calendar" to tell calendar id (item 1 of argv)
+            tell application "Calendar" to tell (first calendar whose calendarIdentifier is (item 1 of argv))
                 delete (every event whose summary starts with (item 2 of argv))
             end tell
         end run''', calendar_id, self.token)
@@ -155,7 +155,7 @@ class Native(unittest.TestCase):
                 workflow(ROOT / "workflows/apple/GTD-EventCapture.workflow",
                          [{"text": name + " " + text, "expected": "GTD Event Quick Capture", "button": "OK"}])
                 properties = osa('''on run argv
-                    tell application "Calendar" to tell calendar id (item 1 of argv)
+                    tell application "Calendar" to tell (first calendar whose calendarIdentifier is (item 1 of argv))
                         set matches to events whose summary is (item 2 of argv)
                         if count of matches is not 1 then error "Expected one captured event"
                         set e to item 1 of matches
@@ -219,13 +219,15 @@ class Native(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         compiled = Path(directory.name) / "GTDLib.scpt"
         command("osacompile", "-o", compiled,
-                ROOT / "workflows/alfred/GTDLib.scptd/Contents/Resources/Scripts/main.scpt")
-        result = osa('''on run argv
+                ROOT / "workflows/alfred/GTDLib.scptd/Contents/Resources/Scripts/main.applescript")
+        result = osa('''use framework "Foundation"
+        use scripting additions
+        on run argv
             set libraryObject to load script POSIX file (item 1 of argv)
             set taskTitle to item 2 of argv
-            set resultInfo to libraryObject's createTask:taskTitle withContext:missing value priority:2 dueDate:missing value
+            set resultInfo to libraryObject's createTask_withContext_priority_dueDate_(taskTitle, missing value, 2, missing value)
             set taskIdentifier to id of resultInfo
-            libraryObject's addNote:"O'Brien quoted note" toTask:taskIdentifier toProject:missing value
+            libraryObject's addNote_toTask_toProject_("O'Brien quoted note", taskIdentifier, missing value)
             set dashboard to libraryObject's getDashboardData()
             if inboxCount of dashboard is not 1 then error "Wrong library inbox count"
             return taskIdentifier

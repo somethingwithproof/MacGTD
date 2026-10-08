@@ -51,7 +51,7 @@ class Harness(unittest.TestCase):
                 tree = ast.parse((ROOT / "tests/support" / name).read_text())
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Constant) and isinstance(node.value, str):
-                        if "tell application" in node.value and "\n" in node.value:
+                        if ("tell application" in node.value or "load script" in node.value) and "\n" in node.value:
                             with self.subTest(file=name, line=node.lineno):
                                 source.write_text(node.value)
                                 command("osacompile", "-o", compiled, source)
