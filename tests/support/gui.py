@@ -32,31 +32,45 @@ def dialog(text=None, button="OK", expected="", step=""):
         set fieldText to item 3 of argv
         set hasField to item 4 of argv
         set stepText to item 5 of argv
+        set lastFailure to "No matching dialog"
         tell application "System Events"
-            repeat 120 times
-                repeat with p in (application processes whose name is "com.apple.automator.runner" or name is "Automator Runner" or name is "automator" or name is "Automator")
+            repeat 80 times
+                repeat with p in (application processes whose name is "com.apple.automator.runner" or name is "Automator Runner" or name is "Automator")
+                    set candidateWindows to {}
                     with timeout of 2 seconds
-                    try
-                    tell p
-                        repeat with w in windows
-                            if name of w is expectedTitle then
-                                if stepText is not "" then
-                                    set allText to value of every static text of w as text
-                                    if allText does not contain stepText then error "Unexpected review step"
-                                end if
-                                if hasField is "yes" then set value of text field 1 of w to fieldText
-                                click button buttonTitle of w
-                                return "clicked"
-                            end if
-                        end repeat
-                    end tell
-                    end try
+                        try
+                            set candidateWindows to windows of p
+                        on error messageText
+                            set lastFailure to messageText
+                        end try
                     end timeout
+                    repeat with w in candidateWindows
+                        -- An unnamed or stale AX window must not hide another live dialog.
+                        with timeout of 2 seconds
+                            try
+                                if name of w is expectedTitle then
+                                    set correctStep to true
+                                    if stepText is not "" then
+                                        set allText to value of every static text of w as text
+                                        set correctStep to allText contains stepText
+                                    end if
+                                    if correctStep then
+                                        if hasField is "yes" then set value of text field 1 of w to fieldText
+                                        click button buttonTitle of w
+                                        return "clicked"
+                                    end if
+                                    set lastFailure to "Waiting for expected review step"
+                                end if
+                            on error messageText
+                                set lastFailure to messageText
+                            end try
+                        end timeout
+                    end repeat
                 end repeat
                 delay 0.25
             end repeat
         end tell
-        error "Expected Automator dialog did not appear: " & expectedTitle
+        error "Expected Automator dialog did not respond: " & expectedTitle & ": " & lastFailure
     end run'''
     osa(source, expected, button, text or "", "yes" if text is not None else "no", step, timeout=40)
 
