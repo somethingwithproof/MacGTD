@@ -10,9 +10,25 @@ PASSED=0
 FAILED=0
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
-section() { echo -e "\n${YELLOW}$1${NC}"; }
-pass()    { echo -e "  ${GREEN}PASS${NC}: $1"; PASSED=$((PASSED + 1)); }
-fail()    { echo -e "  ${RED}FAIL${NC}: $1"; FAILED=$((FAILED + 1)); }
+section() {
+    local title="$1"
+    echo -e "\n${YELLOW}${title}${NC}"
+    return 0
+}
+
+pass() {
+    local message="$1"
+    echo -e "  ${GREEN}PASS${NC}: ${message}"
+    PASSED=$((PASSED + 1))
+    return 0
+}
+
+fail() {
+    local message="$1"
+    echo -e "  ${RED}FAIL${NC}: ${message}"
+    FAILED=$((FAILED + 1))
+    return 0
+}
 
 section "Automator Workflow Installation Tests"
 
