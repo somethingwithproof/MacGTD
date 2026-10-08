@@ -121,8 +121,8 @@ on run {input, parameters}
 
 	-- Parse labels (@label)
 	set labelName to ""
-	set words to my tokens(taskText)
-	repeat with w in words
+	set markerTokens to my tokens(taskText)
+	repeat with w in markerTokens
 		if (w as text) starts with "@" then
 			set labelName to text 2 thru -1 of (w as text)
 			set taskText to my replaceText(taskText, w as text, "")
@@ -132,8 +132,8 @@ on run {input, parameters}
 
 	-- Parse project (+project) — stored in task content for now
 	set projectName to ""
-	set words to my tokens(taskText)
-	repeat with w in words
+	set markerTokens to my tokens(taskText)
+	repeat with w in markerTokens
 		if (w as text) starts with "+" then
 			set projectName to text 2 thru -1 of (w as text)
 			set taskText to my replaceText(taskText, w as text, "")

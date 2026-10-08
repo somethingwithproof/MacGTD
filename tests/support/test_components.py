@@ -193,3 +193,23 @@ class Components(unittest.TestCase):
                     return manager's readPreference("taskApp")
                 end run''', self.compiled(name), SCRIPTS / "preferences_manager.scpt", env=self.env)
                 self.assertEqual(result, "reminders")
+
+    def test_calendar_parser_metadata_without_gui(self):
+        bundle = ROOT / "workflows/apple/GTD-EventCapture.workflow/Contents/document.wflow"
+        source = plistlib.loads(bundle.read_bytes())["actions"][0]["action"]["ActionParameters"]["source"]
+        path = self.path / "event.applescript"
+        path.write_text(source)
+        compiled = self.path / "event.scpt"
+        command("osacompile", "-o", compiled, path)
+        result = osa('''on run argv
+            set parser to load script POSIX file (item 1 of argv)
+            set metadata to parser's parseEventInput("O'Brien café due:2030-05-20 14:15 45m @Conference Room")
+            set d to eventStart of metadata
+            return (eventTitle of metadata) & "|" & (time of d) & "|" & ((eventEnd of metadata) - d) & "|" & (eventLocation of metadata)
+        end run''', compiled)
+        self.assertEqual(result, "O'Brien café|51300|2700|Conference Room")
+        _, code = command("osascript", "-", compiled, input='''on run argv
+            set parser to load script POSIX file (item 1 of argv)
+            parser's parseEventInput("Meeting tomorrow 0m")
+        end run''', check=False)
+        self.assertNotEqual(code, 0)

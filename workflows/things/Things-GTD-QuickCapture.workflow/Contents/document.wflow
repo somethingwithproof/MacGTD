@@ -101,8 +101,8 @@
 
 	-- Parse tag (@tag)
 	set tagValue to ""
-	set words to my tokens(taskText)
-	repeat with w in words
+	set markerTokens to my tokens(taskText)
+	repeat with w in markerTokens
 		if (w as text) starts with "@" then
 			set tagValue to text 2 thru -1 of (w as text)
 			set taskText to my replaceText(taskText, w as text, "")
@@ -112,8 +112,8 @@
 
 	-- Parse project (+project)
 	set projectValue to ""
-	set words to my tokens(taskText)
-	repeat with w in words
+	set markerTokens to my tokens(taskText)
+	repeat with w in markerTokens
 		if (w as text) starts with "+" then
 			set projectValue to text 2 thru -1 of (w as text)
 			set taskText to my replaceText(taskText, w as text, "")

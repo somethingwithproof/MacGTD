@@ -149,7 +149,8 @@ class Native(unittest.TestCase):
             end tell
         end run''', calendar_id, self.token)
         for suffix, text, duration, location in (("A", "tomorrow 2pm 1h @Conference Room", 3600, "Conference Room"),
-                                                ("B", "today 9am 30m", 1800, "")):
+                                                ("B", "today 9am 30m", 1800, ""),
+                                                ("C", "today 14:15 45m", 2700, "")):
             with self.subTest(event=suffix):
                 name = self.token + suffix
                 workflow(ROOT / "workflows/apple/GTD-EventCapture.workflow",
@@ -165,7 +166,7 @@ class Native(unittest.TestCase):
                     end tell
                 end run''', calendar_id, name)
                 expected_day = date.today() + timedelta(days=1 if suffix == "A" else 0)
-                seconds = 14 * 3600 if suffix == "A" else 9 * 3600
+                seconds = {"A": 14 * 3600, "B": 9 * 3600, "C": 14 * 3600 + 15 * 60}[suffix]
                 self.assertEqual(properties, f"{expected_day.isoformat()}|{seconds}|{duration}|{location}")
 
     def test_context_list_routing(self):
