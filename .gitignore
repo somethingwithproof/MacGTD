@@ -5,3 +5,5 @@
 .idea/
 .vscode/
 dist/
+test-results/
+__pycache__/

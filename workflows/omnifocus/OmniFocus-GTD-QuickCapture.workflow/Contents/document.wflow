@@ -87,7 +87,7 @@
 			set AppleScript's text item delimiters to "due:"
 			set parts to text items of taskText
 			if (count of parts) &gt; 1 then
-				set dateStr to word 1 of item 2 of parts
+				set dateStr to my firstToken(item 2 of parts)
 				if dateStr contains "-" then
 					set AppleScript's text item delimiters to "-"
 					set dateParts to text items of dateStr
@@ -109,7 +109,7 @@
 
 	-- Parse tag (@tag)
 	set tagValue to ""
-	set words to every word of taskText
+	set words to my tokens(taskText)
 	repeat with w in words
 		if (w as text) starts with "@" then
 			set tagValue to text 2 thru -1 of (w as text)
@@ -120,7 +120,7 @@
 
 	-- Parse project (+project)
 	set projectValue to ""
-	set words to every word of taskText
+	set words to my tokens(taskText)
 	repeat with w in words
 		if (w as text) starts with "+" then
 			set projectValue to text 2 thru -1 of (w as text)
@@ -132,24 +132,22 @@
 	set taskText to my trimText(taskText)
 
 	-- Check if OmniFocus is installed
-	set ofInstalled to false
-	try
-		tell application "System Events"
-			set ofInstalled to exists application file id "com.omnigroup.OmniFocus3" or exists application file id "com.omnigroup.OmniFocus4"
-		end tell
-	end try
+    set ofInstalled to false
+    try
+        path to application id "com.omnigroup.OmniFocus4"
+        set ofInstalled to true
+    on error
+        try
+            path to application id "com.omnigroup.OmniFocus3"
+            set ofInstalled to true
+        end try
+    end try
 
 	if ofInstalled then
 		-- Use AppleScript
-		tell application "OmniFocus"
-			tell default document
-				set taskProps to {name:taskText, flagged:isFlagged}
-				set newTask to make new inbox task with properties taskProps
-				if dueDate is not missing value then
-					set due date of newTask to dueDate
-				end if
-			end tell
-		end tell
+		-- Compile installed-app vocabulary at execution time; input is passed as data.
+		set bridgeSource to "on run argv\n    tell application \"OmniFocus\" to tell default document\n        set newTask to make new inbox task with properties {name:(item 1 of argv), flagged:(item 2 of argv)}\n        if item 3 of argv is not missing value then set due date of newTask to item 3 of argv\n        return id of newTask\n    end tell\nend run"
+		run script bridgeSource with parameters {taskText, isFlagged, dueDate}
 
 		set notifyMsg to "Task added to OmniFocus: " &amp; taskText
 		if isFlagged then set notifyMsg to notifyMsg &amp; " (flagged)"
@@ -210,7 +208,23 @@ on toHex(theNum)
 		set theHex to theHex &amp; character theInt of hexChars
 	end repeat
 	return theHex
-end toHex</string>
+end toHex
+-- Parse command syntax independently of language-specific word boundaries.
+on tokens(theText)
+    set oldDelimiters to AppleScript's text item delimiters
+    set AppleScript's text item delimiters to {space, tab, return, linefeed}
+    set resultTokens to text items of theText
+    set AppleScript's text item delimiters to oldDelimiters
+    return resultTokens
+end tokens
+
+on firstToken(theText)
+    repeat with tokenValue in my tokens(theText)
+        if tokenValue as text is not "" then return tokenValue as text
+    end repeat
+    return ""
+end firstToken
+</string>
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>

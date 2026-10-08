@@ -74,7 +74,7 @@
 
 	-- Parse duration (30m, 1h, 2h, etc.)
 	set eventDuration to 60 -- default 60 minutes
-	set words to every word of eventText
+	set words to my tokens(eventText)
 	repeat with w in words
 		set wText to w as text
 		if wText ends with "m" then
@@ -96,7 +96,7 @@
 	set eventHour to 9
 	set eventMinute to 0
 	set foundTime to false
-	set words to every word of eventText
+	set words to my tokens(eventText)
 	repeat with w in words
 		set wText to w as text
 		if wText ends with "pm" or wText ends with "am" then
@@ -143,7 +143,7 @@
 	-- Create calendar event
 	tell application "Calendar"
 		launch
-		set defaultCal to first calendar whose name is not ""
+		set defaultCal to first calendar whose writable is true
 		tell defaultCal
 			make new event with properties {summary:eventText, start date:eventDate, end date:endDate, location:eventLocation}
 		end tell
@@ -173,7 +173,23 @@ on trimText(theText)
 		set theText to text 1 thru -2 of theText
 	end repeat
 	return theText
-end trimText</string>
+end trimText
+-- Parse command syntax independently of language-specific word boundaries.
+on tokens(theText)
+    set oldDelimiters to AppleScript's text item delimiters
+    set AppleScript's text item delimiters to {space, tab, return, linefeed}
+    set resultTokens to text items of theText
+    set AppleScript's text item delimiters to oldDelimiters
+    return resultTokens
+end tokens
+
+on firstToken(theText)
+    repeat with tokenValue in my tokens(theText)
+        if tokenValue as text is not "" then return tokenValue as text
+    end repeat
+    return ""
+end firstToken
+</string>
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>

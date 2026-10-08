@@ -7,7 +7,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 RUNNER_DIR="$HOME/actions-runner"
-REPO="thomasvincent/MacGTD"
+REPO="${MACGTD_GITHUB_REPO:-somethingwithproof/MacGTD}"
 
 info()  { echo -e "${GREEN}>>>${NC} $1"; }
 warn()  { echo -e "${YELLOW}>>>${NC} $1"; }
@@ -37,6 +37,7 @@ if ! command -v brew &>/dev/null; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 info "Homebrew installed"
+brew install mise
 
 # --- Install Alfred ---
 if ! ls /Applications/Alfred*.app &>/dev/null; then
@@ -54,7 +55,7 @@ echo "  https://github.com/$REPO/settings/actions/runners/new"
 echo ""
 echo "  Or run: gh api repos/$REPO/actions/runners/registration-token --jq .token"
 echo ""
-read -rp "Enter runner registration token: " RUNNER_TOKEN
+read -rsp "Enter runner registration token: " RUNNER_TOKEN
 
 if [[ -z "$RUNNER_TOKEN" ]]; then
     error "Token is required"
@@ -86,22 +87,9 @@ rm actions-runner.tar.gz
     --unattended \
     --replace
 
-# --- Grant TCC permissions ---
-info "Granting accessibility permissions..."
-warn "This requires sudo access."
-
-TCC_DB="/Library/Application Support/com.apple.TCC/TCC.db"
-
-# Grant accessibility to key apps
-for client in "com.runningwithcrayons.Alfred" "com.apple.Terminal" "com.googlecode.iterm2"; do
-    sudo sqlite3 "$TCC_DB" \
-        "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags) VALUES ('kTCCServiceAccessibility', '$client', 0, 2, 0, 1, 0);" 2>/dev/null || true
-done
-
-for client_path in "/usr/bin/osascript" "$RUNNER_DIR/bin/Runner.Worker"; do
-    sudo sqlite3 "$TCC_DB" \
-        "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags) VALUES ('kTCCServiceAccessibility', '$client_path', 1, 2, 0, 1, 0);" 2>/dev/null || true
-done
+# Provision OS permissions interactively for this logged-in account.
+warn "Grant Accessibility and Automation permissions in System Settings for the runner."
+warn "Do not edit TCC.db: permission failures must be visible, not silently ignored."
 
 # --- Install as launchd service ---
 info "Installing launchd service..."

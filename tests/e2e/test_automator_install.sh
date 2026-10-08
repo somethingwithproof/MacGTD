@@ -1,82 +1,23 @@
 #!/bin/bash
 set -euo pipefail
-
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-PASSED=0
-FAILED=0
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-
-section() { echo -e "\n${YELLOW}$1${NC}"; }
-pass()    { echo -e "  ${GREEN}PASS${NC}: $1"; PASSED=$((PASSED + 1)); }
-fail()    { echo -e "  ${RED}FAIL${NC}: $1"; FAILED=$((FAILED + 1)); }
-
-section "Automator Workflow Installation Tests"
-
-# Test each workflow can be opened by Automator
-for platform in apple microsoft google; do
-    workflow_dir="${REPO_ROOT}/workflows/${platform}"
-    workflow=$(find "$workflow_dir" -name "*.workflow" -maxdepth 1 -type d 2>/dev/null | head -1)
-
-    if [[ -z "$workflow" ]]; then
-        fail "${platform}: No workflow found"
-        continue
-    fi
-
-    workflow_name=$(basename "$workflow")
-
-    # Test: Copy to user's Services directory
-    SERVICES_DIR="$HOME/Library/Services"
-    mkdir -p "$SERVICES_DIR"
-
-    if cp -R "$workflow" "$SERVICES_DIR/" 2>/dev/null; then
-        pass "${platform}: ${workflow_name} installed to Services"
-    else
-        fail "${platform}: Could not install ${workflow_name}"
-        continue
-    fi
-
-    # Test: Verify it appears in Services
-    INSTALLED="${SERVICES_DIR}/${workflow_name}"
-    if [[ -d "$INSTALLED" ]]; then
-        pass "${platform}: ${workflow_name} present in Services"
-    else
-        fail "${platform}: ${workflow_name} not found in Services"
-    fi
-
-    # Test: Validate installed copy XML
-    WFLOW="${INSTALLED}/Contents/document.wflow"
-    if xmllint --noout "$WFLOW" 2>/dev/null; then
-        pass "${platform}: installed workflow XML valid"
-    else
-        fail "${platform}: installed workflow XML invalid"
-    fi
-
-    # Test: Extract and compile embedded AppleScript
-    if plutil -extract 'actions.0.action.ActionParameters.source' raw "$WFLOW" > /tmp/e2e_test_script.applescript 2>/dev/null; then
-        if osacompile -o /dev/null /tmp/e2e_test_script.applescript 2>/dev/null; then
-            pass "${platform}: embedded AppleScript compiles after install"
-        else
-            fail "${platform}: embedded AppleScript compile error after install"
-        fi
-        rm -f /tmp/e2e_test_script.applescript
-    else
-        fail "${platform}: could not extract AppleScript from installed workflow"
-    fi
-
-    # Cleanup - remove from Services
-    rm -rf "$INSTALLED"
+cd "$(dirname "$0")/../.."
+TEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/macgtd-install.XXXXXX")
+trap 'rm -rf "$TEST_DIR"' EXIT
+count=0
+# Exercise every bundle, including all five Apple workflows and all external targets.
+for workflow in workflows/*/*.workflow; do
+    installed="$TEST_DIR/$(basename "$workflow")"
+    cp -R "$workflow" "$installed"
+    diff -r "$workflow" "$installed"
+    plutil -lint "$installed/Contents/info.plist" "$installed/Contents/document.wflow"
+    index=0
+    while plutil -extract "actions.$index.action.ActionParameters.source" raw \
+        "$installed/Contents/document.wflow" > "$TEST_DIR/source.applescript" 2>/dev/null; do
+        osacompile -o "$TEST_DIR/compiled.scpt" "$TEST_DIR/source.applescript"
+        index=$((index + 1))
+    done
+    [[ "$index" -gt 0 ]] || { echo "No AppleScript actions found: $workflow" >&2; exit 1; }
+    count=$((count + 1))
 done
-
-# Summary
-TOTAL=$((PASSED + FAILED))
-echo ""
-echo -e "${YELLOW}Installation Tests: ${PASSED}/${TOTAL} passed${NC}"
-
-if [[ "$FAILED" -gt 0 ]]; then
-    echo -e "${RED}${FAILED} test(s) failed${NC}"
-    exit 1
-fi
+[[ "$count" -eq 11 ]] || { echo "Expected 11 workflow bundles, found $count" >&2; exit 1; }
+echo "All $count workflow bundles survived installation and compilation"
