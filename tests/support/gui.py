@@ -34,7 +34,7 @@ def dialog(text=None, button="OK", expected="", step=""):
         set stepText to item 5 of argv
         tell application "System Events"
             repeat 120 times
-                repeat with p in (application processes whose name is "Automator Runner" or name is "automator" or name is "Automator")
+                repeat with p in (application processes whose name is "com.apple.automator.runner" or name is "Automator Runner" or name is "automator" or name is "Automator")
                     with timeout of 2 seconds
                     try
                     tell p

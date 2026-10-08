@@ -1,6 +1,8 @@
 # MacGTD E2E Runner Infrastructure
 
-Terraform configuration for provisioning an EC2 Mac dedicated host as a GitHub Actions self-hosted runner.
+Project overview and status: [MacGTD](../../README.md).
+
+Optional Terraform scaffolding for an EC2 Mac dedicated host. The default CI and native E2E pipeline uses GitHub-hosted macOS runners; deploying this infrastructure is not required. A self-hosted desktop needs a logged-in test account, interactive OS permissions, and manual Alfred Powerpack activation before licensed UI tests can run.
 
 ## Prerequisites
 
@@ -13,24 +15,22 @@ Terraform configuration for provisioning an EC2 Mac dedicated host as a GitHub A
 
 1. Copy `terraform.tfvars.example` to `terraform.tfvars` and fill in values
 2. Get a runner registration token:
+
    ```bash
-   gh api repos/thomasvincent/MacGTD/actions/runners/registration-token -f | jq -r .token
+   gh api repos/somethingwithproof/MacGTD/actions/runners/registration-token -f | jq -r .token
    ```
+
 3. Deploy:
+
    ```bash
    terraform init
    terraform plan
    terraform apply
    ```
 
-## Cost
+## Deployment considerations
 
-EC2 Mac dedicated hosts have a **24-hour minimum allocation**.
-
-| Instance | Chip | Approx. Cost |
-|----------|------|-------------|
-| mac2.metal | M1 | ~$15.60/day |
-| mac2-m2pro.metal | M2 Pro | ~$18.48/day |
+Review current AWS pricing and dedicated-host allocation/release terms before deployment. The bootstrap installs the runtime and runner tooling but does not silently modify desktop permissions or start a GUI runner as root. Start the runner from the dedicated logged-in account after granting permissions. Runner registration tokens expire; supply a fresh token at deployment time.
 
 ## Teardown
 
@@ -38,4 +38,4 @@ EC2 Mac dedicated hosts have a **24-hour minimum allocation**.
 terraform destroy
 ```
 
-**Note:** The dedicated host must have been allocated for at least 24 hours before it can be released.
+Host release is subject to AWS allocation terms; verify eligibility before teardown.

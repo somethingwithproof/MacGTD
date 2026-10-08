@@ -1,5 +1,8 @@
 # MacGTD
 
+[![CI](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/somethingwithproof/MacGTD/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
 macOS automation for [Getting Things Done](https://gettingthingsdone.com/) — quick-capture workflows for 8 platforms with natural language parsing, priority/due dates, contexts, and projects.
 
 ## Workflows
@@ -32,7 +35,7 @@ macOS automation for [Getting Things Done](https://gettingthingsdone.com/) — q
 
 All workflows support inline markers:
 
-```
+```text
 Buy groceries @errands +shopping !1 due:tomorrow
 ```
 
@@ -79,7 +82,7 @@ These require a one-time setup to store API credentials in macOS Keychain:
 ### Alfred Workflow
 
 1. Requires [Alfred 4+](https://www.alfredapp.com/) with Powerpack
-2. Double-click `dist/MacGTD.alfredworkflow` (from [releases](https://github.com/thomasvincent/MacGTD/releases))
+2. Double-click `dist/MacGTD.alfredworkflow` (from [releases](https://github.com/somethingwithproof/MacGTD/releases))
 3. Or copy `workflows/alfred/workflow/` contents into a new Alfred workflow
 
 **Alfred keywords:** `task`, `clip`, `gtd focus`
@@ -112,7 +115,7 @@ ln -s "$(pwd)/workflows/menubar/gtd-menubar.sh" \
 
 ## Project Structure
 
-```
+```text
 MacGTD/
 ├── workflows/
 │   ├── apple/          # Automator → Apple Reminders (5 workflows)
@@ -131,7 +134,7 @@ MacGTD/
 │   ├── test_automator_loading.sh
 │   ├── test_natural_language_parser.sh
 │   ├── test_reminders_integration.sh
-│   └── e2e/            # Self-hosted runner E2E tests
+│   └── e2e/            # Native macOS E2E tests
 ├── infra/
 │   ├── terraform/      # EC2 Mac dedicated host
 │   └── local/          # Local Mac Mini runner setup
@@ -139,8 +142,8 @@ MacGTD/
 │   └── package-alfred.sh
 └── .github/
     └── workflows/
-        ├── ci.yml      # Automated tests (every push)
-        └── e2e.yml     # E2E tests (self-hosted, manual)
+        ├── ci.yml      # Hosted validation + native E2E
+        └── e2e.yml     # Reusable, nightly, and manual desktop E2E
 ```
 
 ## Development
@@ -148,27 +151,21 @@ MacGTD/
 ### Running Tests
 
 ```bash
-./tests/validate_repo.sh              # Repo structure (44 checks)
-./tests/test_applescript_syntax.sh     # AppleScript compilation
-./tests/test_automator_loading.sh      # Bundle validation
-./tests/test_natural_language_parser.sh # NLP unit tests
-./tests/test_reminders_integration.sh  # Reminders API tests
+mise install
+mise exec -- python tests/run.py validation
 ```
+
+Validation compiles the AppleScript sources, tests the production parser, checks every Automator bundle and Alfred action target, and exercises preferences, focus persistence, JSON transport, and packaging. Tests produce JUnit reports and command logs under `test-results/`.
 
 ### E2E Testing
 
-Requires a self-hosted runner (EC2 Mac or local Mac Mini):
+GitHub Actions runs validation on hosted macOS 15 and 26 runners, followed by native desktop E2E on `macos-15-intel`. Pull requests, pushes to `main`, nightly runs, and manual dispatches use disposable GitHub-hosted Macs. No self-hosted runner or external credentials are required.
 
 ```bash
-# EC2 Mac
-cd infra/terraform && terraform apply
-
-# Local Mac Mini
-./infra/local/setup-local-runner.sh
-
-# Trigger E2E
-gh workflow run e2e.yml -f test_suite=all
+gh workflow run e2e.yml --ref main -f test_suite=automator
 ```
+
+Native tests operate real Automator dialogs and read back Reminders and Calendar records. They also check menu counts, the shared library, and persistent focus sessions with launchd timer cancellation. Live external integrations are deferred. Licensed Alfred UI tests can be run separately in a dedicated local account with Alfred 5 and Powerpack; they are not part of the hosted suite. See [test setup and coverage](tests/e2e/README.md).
 
 ### Branch Naming
 
@@ -180,7 +177,7 @@ gh workflow run e2e.yml -f test_suite=all
 
 [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 feat(apple): add due date support to quick capture
 
 Closes #123
