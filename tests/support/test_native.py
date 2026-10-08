@@ -204,7 +204,16 @@ class Native(unittest.TestCase):
             tell application "Reminders" to delete list id (item 1 of argv)
         end run''', context_id)
         self.addCleanup(command, "osascript", focus, "stop", env=env, check=False)
-        command("osascript", focus, context, "1", env=env)
+        session_duration = osa('''on run argv
+            set libraryObject to load script POSIX file (item 1 of argv)
+            set runtimeScriptsPath of libraryObject to item 3 of argv
+            set sessionInfo to libraryObject's startFocusSession_duration_(item 2 of argv, 1)
+            if class of (startTime of sessionInfo) is not date then error "Session start is not a date"
+            if class of (endTime of sessionInfo) is not date then error "Session end is not a date"
+            return (endTime of sessionInfo) - (startTime of sessionInfo)
+        end run''', ROOT / "workflows/alfred/GTDLib.scptd", context, scripts,
+                               env={key: value for key, value in env.items() if key != "MACGTD_SCRIPT_DIR"})
+        self.assertEqual(session_duration, "60")
         self.assertIn(self.token, command("osascript", focus, "status", env=env)[0])
         session = json.loads((Path(directory.name) / "focus-session.json").read_text())
         service = f"gui/{os.getuid()}/{session['jobLabel']}"
@@ -223,6 +232,7 @@ class Native(unittest.TestCase):
         events = [json.loads(line) for line in (Path(directory.name) / "focus_log.jsonl").read_text().splitlines()]
         self.assertEqual([event["event"] for event in events], ["start", "complete", "start", "complete"])
         self.assertEqual(events[-1]["sessionId"], expired["sessionId"])
+        self.assertEqual(events[-1]["actualSeconds"], 60)
 
     def test_library_native_task_dashboard_and_note(self):
         import tempfile
@@ -303,3 +313,26 @@ class Native(unittest.TestCase):
         response = json.loads(action("clipboard_capture"))
         self.assertTrue(response["items"])
         self.assertEqual(self.query("count"), "2")
+
+    def test_focus_context_marker_requires_exact_line(self):
+        import tempfile
+        from pathlib import Path
+        context = "@" + self.token
+        osa('''on run argv
+            tell application "Reminders" to tell list id (item 1 of argv)
+                set marker to "Context: " & (item 2 of argv)
+                make new reminder with properties {name:"exact", body:(marker & return & marker)}
+                make new reminder with properties {name:"prefix", body:(marker & "work")}
+                make new reminder with properties {name:"suffix", body:(marker & "-office")}
+            end tell
+        end run''', self.list_id, context)
+        with tempfile.TemporaryDirectory(prefix="macgtd-native-context-") as directory:
+            compiled = Path(directory) / "focus.scpt"
+            command("osacompile", "-o", compiled, ROOT / "workflows/alfred/workflow/scripts/focus_mode.scpt")
+            result = osa('''on run argv
+                set controller to load script POSIX file (item 1 of argv)
+                set matches to controller's getTasksForContext(item 2 of argv)
+                if count of matches is not 1 then error "Context must match one exact marker, without duplicates"
+                tell application "Reminders" to return name of item 1 of matches
+            end run''', compiled, context)
+        self.assertEqual(result, "exact")

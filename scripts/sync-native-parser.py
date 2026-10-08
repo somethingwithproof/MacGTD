@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--check", action="store_true")
 args = parser.parse_args()
-source = (ROOT / "workflows/alfred/workflow/scripts/natural_language_task.scpt").read_text()
+source = (ROOT / "workflows/alfred/workflow/scripts/natural_language_task.scpt").read_text(encoding="utf-8")
 replacement = '''on run {input, parameters}
     display dialog "Enter task (!1/!2/!3 priority, due:today/tomorrow/date, @context, +project):" default answer "" with title "Quick Capture"
     set inputText to text returned of result
@@ -63,7 +63,9 @@ on parseEventInput(inputText)
 end parseEventInput'''
 
 for bundle, entry in (("GTD-QuickCapture", replacement), ("GTD-EventCapture", event_replacement)):
-    embedded = re.sub(r"on run argv\n.*?end run", lambda match, replacement_entry=entry: replacement_entry, source, count=1, flags=re.DOTALL)
+    embedded, replacements = re.subn(r"on run argv\n.*?end run", lambda match, replacement_entry=entry: replacement_entry, source, count=1, flags=re.DOTALL)
+    if replacements != 1:
+        raise SystemExit("Shared parser must contain exactly one replaceable 'on run argv' handler")
     path = ROOT / "workflows/apple" / (bundle + ".workflow/Contents/document.wflow")
     data = plistlib.loads(path.read_bytes())
     parameters = data["actions"][0]["action"]["ActionParameters"]

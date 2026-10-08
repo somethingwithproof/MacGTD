@@ -38,7 +38,7 @@ on analyzeFocusData()
     end if
     set averageMinutes to 0
     if totalSessions > 0 then set averageMinutes to totalSeconds / (60 * totalSessions)
-    return {totalSessions:totalSessions, totalMinutes:totalSeconds / 60, averageSessionLength:averageMinutes, longestSession:longestSeconds / 60}
+    return {totalSessions:totalSessions, totalMinutes:((round (totalSeconds / 6)) / 10), averageSessionLength:((round (averageMinutes * 10)) / 10), longestSession:((round (longestSeconds / 6)) / 10)}
 end analyzeFocusData
 on generateReport(values)
     return "Focus sessions: " & totalSessions of values & return & "Total minutes: " & totalMinutes of values & return & "Average minutes: " & averageSessionLength of values & return & "Longest session: " & longestSession of values

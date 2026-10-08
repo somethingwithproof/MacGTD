@@ -45,5 +45,7 @@
 		<key>selectedTab</key>
 		<string>result</string>
 	</dict>
+	<key>OSAAppleScriptObjCEnabled</key>
+	<true/>
 </dict>
 </plist>

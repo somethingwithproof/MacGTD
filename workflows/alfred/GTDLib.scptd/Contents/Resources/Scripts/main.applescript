@@ -87,12 +87,18 @@ on startFocusSession:contextName duration:durationMinutes
         set configuredPath to current application's NSProcessInfo's processInfo()'s environment()'s objectForKey:"MACGTD_SCRIPT_DIR"
         if configuredPath is not missing value then set scriptsPath to configuredPath as text
     end if
-    if scriptsPath is "" then set scriptsPath to (do shell script "pwd") & "/scripts"
+    if scriptsPath is "" then error "Set MACGTD_SCRIPT_DIR or runtimeScriptsPath to the installed MacGTD workflow's scripts directory"
     set controller to my loadComponent(scriptsPath & "/focus_mode.scpt")
+    set scriptsOverride of controller to scriptsPath
     controller's startFocus(contextName, durationMinutes)
     set values to controller's readState()
-    return {sessionId:((values's objectForKey:"sessionId") as text), context:contextName, startTime:((values's objectForKey:"startTime") as integer), endTime:((values's objectForKey:"endTime") as integer), duration:durationMinutes}
+    return my sessionInfo(values, contextName, durationMinutes)
 end startFocusSession:duration:
+on sessionInfo(values, contextName, durationMinutes)
+    set startDate to (current application's NSDate's dateWithTimeIntervalSince1970:((values's objectForKey:"startTime") as real)) as date
+    set endDate to (current application's NSDate's dateWithTimeIntervalSince1970:((values's objectForKey:"endTime") as real)) as date
+    return {sessionId:((values's objectForKey:"sessionId") as text), context:contextName, startTime:startDate, endTime:endDate, duration:durationMinutes}
+end sessionInfo
 on processInbox()
     tell application "Reminders"
         if not (exists list "Inbox") then make new list with properties {name:"Inbox"}

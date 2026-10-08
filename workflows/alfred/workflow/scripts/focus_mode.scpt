@@ -3,6 +3,7 @@ use AppleScript version "2.4"
 use scripting additions
 use framework "Foundation"
 property stateOverride : ""
+property scriptsOverride : ""
 property timerEnabled : true -- Library-test dependency injection; CLI always uses launchd.
 
 on stateDirectory()
@@ -17,6 +18,7 @@ on ensureDirectory()
     return directoryPath
 end ensureDirectory
 on scriptDirectory()
+    if scriptsOverride is not "" then return scriptsOverride
     set overridePath to current application's NSProcessInfo's processInfo()'s environment()'s objectForKey:"MACGTD_SCRIPT_DIR"
     if overridePath is not missing value then return overridePath as text
     return (do shell script "pwd") & "/scripts"
@@ -130,6 +132,13 @@ on startFocusWithTask(contextName, taskTitle, taskIdentifier, listIdentifier, du
         error "Focus " & phase & ": " & messageText number errorNumber
     end try
 end startFocusWithTask
+on elapsedSeconds(values)
+    set elapsed to (my nowSeconds()) - ((values's objectForKey:"startTime") as integer)
+    set plannedSeconds to ((values's objectForKey:"duration") as integer) * 60
+    if elapsed > plannedSeconds then set elapsed to plannedSeconds
+    if elapsed < 0 then set elapsed to 0
+    return elapsed
+end elapsedSeconds
 on stopFocus()
     my takeLock()
     try
@@ -139,7 +148,7 @@ on stopFocus()
             return "No active focus session"
         end if
         my cancelTimer(values)
-        values's setObject:((my nowSeconds()) - ((values's objectForKey:"startTime") as integer)) forKey:"actualSeconds"
+        values's setObject:(my elapsedSeconds(values)) forKey:"actualSeconds"
         my logFocusEvent("complete", values)
         if not (current application's NSFileManager's defaultManager()'s removeItemAtPath:(my stateDirectory() & "/focus-session.json") |error|:(missing value)) then error "Cannot clear completed focus session"
         my releaseLock()
@@ -165,7 +174,7 @@ on finishTimer(sessionId)
             my releaseLock()
             return "Session is still running"
         end if
-        values's setObject:((my nowSeconds()) - ((values's objectForKey:"startTime") as integer)) forKey:"actualSeconds"
+        values's setObject:(my elapsedSeconds(values)) forKey:"actualSeconds"
         my logFocusEvent("complete", values)
         if not (current application's NSFileManager's defaultManager()'s removeItemAtPath:(my stateDirectory() & "/focus-session.json") |error|:(missing value)) then error "Cannot clear completed focus session"
     on error messageText number errorNumber
@@ -222,8 +231,14 @@ on getTasksForContext(contextName)
         set resultTasks to {}
         repeat with aList in lists
             repeat with r in (reminders of aList whose completed is false)
-                if body of r is not missing value then
-                    if body of r contains ("Context: " & contextName) then set end of resultTasks to r
+                set bodyText to body of r
+                if bodyText is not missing value then
+                    repeat with bodyLine in paragraphs of bodyText
+                        if (bodyLine as text) is ("Context: " & contextName) then
+                            set end of resultTasks to r
+                            exit repeat
+                        end if
+                    end repeat
                 end if
             end repeat
         end repeat

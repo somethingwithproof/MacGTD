@@ -161,7 +161,7 @@ on run {input, parameters}
 			error "Todoist did not confirm task creation"
 		end if
 	on error errMsg
-		error "Capture API request failed"
+		error (my failureMessage(errMsg, apiToken))
 	end try
 
 	return input
@@ -245,6 +245,12 @@ on requestPayload(apiToken, jsonBody)
     set curlCmd to quoted form of curlExecutable &amp; " --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 -X POST " &amp; quoted form of "https://api.todoist.com/api/v1/tasks" &amp; " -H " &amp; quoted form of ("Authorization: Bearer " &amp; apiToken) &amp; " -H " &amp; quoted form of "Content-Type: application/json" &amp; " --data-binary " &amp; quoted form of jsonBody
     return do shell script curlCmd
 end requestPayload
+
+on failureMessage(messageText, apiToken)
+    set safeMessage to current application's NSString's stringWithString:messageText
+    if apiToken is not "" then set safeMessage to safeMessage's stringByReplacingOccurrencesOfString:apiToken withString:"[redacted]"
+    return "Capture API request failed: " &amp; (safeMessage as text)
+end failureMessage
 </string>
 				</dict>
 				<key>BundleIdentifier</key>

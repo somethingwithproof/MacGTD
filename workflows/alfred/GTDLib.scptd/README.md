@@ -17,6 +17,6 @@ Load the compiled bundle with AppleScript `load script`, then call `createTask:w
 
 ## Requirements and limits
 
-Reminders must be configured and Automation permission granted. The library supports native Reminders; unsupported service selection raises an error. Focus operations require the companion Alfred scripts, selected with `MACGTD_SCRIPT_DIR` or their installed default path. No external backend, caching performance, or security certification is implied by the scripting dictionary.
+Reminders must be configured and Automation permission granted. The library supports native Reminders; unsupported service selection raises an error. Focus operations require the companion Alfred scripts, selected explicitly with `MACGTD_SCRIPT_DIR` or the library’s `runtimeScriptsPath` property. Standalone focus calls fail with configuration guidance when neither is supplied. No external backend, caching performance, or security certification is implied by the scripting dictionary.
 
 Hosted validation checks source compilation and shipped bundle loading. Native E2E verifies task creation, priority, dashboard count, and note persistence against Reminders.

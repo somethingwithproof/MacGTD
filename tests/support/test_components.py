@@ -95,12 +95,27 @@ class Components(unittest.TestCase):
         end run''', focus, env=self.env)
         self.assertEqual(response, "Stale timer ignored")
         self.assertTrue(state.exists())
+        library = self.path / "GTDLib.scpt"
+        command("osacompile", "-o", library, ROOT / "workflows/alfred/GTDLib.scptd/Contents/Resources/Scripts/main.applescript")
+        self.assertEqual(osa('''on run argv
+            set controller to load script POSIX file (item 1 of argv)
+            set libraryObject to load script POSIX file (item 2 of argv)
+            set info to libraryObject's sessionInfo(controller's readState(), "@test", 1)
+            if class of (startTime of info) is not date then error "Session start must be a date"
+            if class of (endTime of info) is not date then error "Session end must be a date"
+            return (endTime of info) - (startTime of info)
+        end run''', focus, library, env=self.env), "60")
+        # A persisted session stopped after a day must not count a day as focused time.
+        values["startTime"] -= 86400
+        values["endTime"] -= 86400
+        state.write_text(json.dumps(values), encoding="utf-8")
         self.assertEqual(command("osascript", focus, "stop", env=self.env)[0], "Focus session stopped")
         self.assertFalse(state.exists())
         self.assertEqual(command("osascript", focus, "status", env=self.env)[0], "No active focus session")
         entries = [json.loads(line) for line in (self.path / "state/focus_log.jsonl").read_text().splitlines()]
         self.assertEqual([e["event"] for e in entries], ["start", "complete"])
         self.assertEqual(entries[0]["task"], text)
+        self.assertEqual(entries[-1]["actualSeconds"], 60)
         report = command("osascript", self.compiled("focus_analytics.scpt"), "report", env=self.env)[0]
         self.assertIn("Focus sessions: 1", report)
 
@@ -122,6 +137,14 @@ class Components(unittest.TestCase):
         rendered.write_text(source)
         command("bash", "-n", rendered)
         command("shellcheck", rendered)
+        parent, user_setup = source.split("/bin/bash -s <<'USER_SETUP'", 1)
+        user_setup, after = user_setup.split("\nUSER_SETUP", 1)
+        self.assertIn("sudo -H -u ec2-user --preserve-env=", parent)
+        self.assertNotIn("./config.sh", parent + after)
+        child = self.path / "bootstrap-user.sh"
+        child.write_text(user_setup, encoding="utf-8")
+        command("bash", "-n", child)
+        command("shellcheck", "-s", "bash", child)
 
     def test_api_transport_preserves_json_as_one_argument(self):
         import sys
@@ -147,6 +170,9 @@ class Components(unittest.TestCase):
                     set responseText to workflowAction's requestPayload("fixture-token", item 3 of argv)
                     if not workflowAction's confirmedResponse(responseText) then error "Valid fixture response rejected"
                     if workflowAction's confirmedResponse(item 4 of argv) then error "Error response accepted"
+                    set failureText to workflowAction's failureMessage("HTTP 401 fixture-token", "fixture-token")
+                    if failureText does not contain "HTTP 401" then error "Provider failure reason lost"
+                    if failureText contains "fixture-token" then error "Credential was not redacted"
                     return responseText
                 end run''', compiled, curl, payload, json.dumps({"id": "request-id", "object": "error"}))
                 self.assertEqual(json.loads(result)["id"], "fixture-id")
@@ -213,3 +239,15 @@ class Components(unittest.TestCase):
             parser's parseEventInput("Meeting tomorrow 0m")
         end run''', check=False)
         self.assertNotEqual(code, 0)
+
+    def test_parser_sync_rejects_missing_entry_point(self):
+        import sys
+        script = self.path / "scripts/sync-native-parser.py"
+        script.parent.mkdir(parents=True)
+        script.write_text((ROOT / "scripts/sync-native-parser.py").read_text(encoding="utf-8"), encoding="utf-8")
+        parser = self.path / "workflows/alfred/workflow/scripts/natural_language_task.scpt"
+        parser.parent.mkdir(parents=True)
+        parser.write_text("on run arguments\nreturn arguments\nend run\n", encoding="utf-8")
+        with self.assertRaisesRegex(AssertionError, "exactly one replaceable"):
+            command(sys.executable, script, "--check")
+        self.assertFalse((self.path / "workflows/apple").exists())
