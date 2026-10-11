@@ -77,9 +77,10 @@ verification. An enrollment must still evaluate every applicable criterion.
 
 Contributor diversity and activity scores reflect real participation. They
 cannot be corrected by artificial commits, issues, or author identities.
-The public Scorecard report may lag newly applied controls. Packaging recognition
-also depends on which publishing mechanisms Scorecard supports; the tested
-release workflow is the authoritative implementation evidence.
+The public Scorecard report may lag newly applied controls. Scorecard 5.5.0
+recognizes package-registry publishing workflows, but does not recognize
+GitHub release uploads through `gh release create`. Its Packaging result may
+remain not applicable; the tested release workflow supplies the actual evidence.
 
 Live vendor accounts and licensed desktop apps remain separate from default
 CI. See [coverage and prerequisites](../tests/e2e/README.md).
