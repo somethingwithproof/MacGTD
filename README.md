@@ -204,8 +204,10 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) and follow [CON
 
 Security controls, release signature verification, and remaining Scorecard
 limitations are documented in the [security assessment](docs/security-assessment.md).
-The release workflow builds and attests packages before creating a draft release;
-new provenance applies to those workflow builds, not older downloads.
+The release workflow builds and attests packages before creating a draft release,
+including signed in-toto provenance and Sigstore bundles verified against the
+source commit and ref. New provenance applies to those workflow builds, not
+older downloads.
 
 ## Project history and license
 
