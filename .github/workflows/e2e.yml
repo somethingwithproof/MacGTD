@@ -46,7 +46,14 @@ jobs:
           RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: mise exec -- python scripts/prepare-hosted-macos.py
       - name: Run selected end-to-end suite
+        env:
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: mise exec -- python tests/run.py "$TEST_SUITE" --filter "$TEST_FILTER"
+      - name: Verify hosted permission recovery preserves one capture
+        if: env.TEST_FILTER == ''
+        env:
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: mise exec -- python tests/hosted_permission_recovery.py
       - name: Upload E2E reports, logs, and tested package
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
