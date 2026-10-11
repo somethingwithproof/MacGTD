@@ -124,4 +124,4 @@ class HostedPermissions(unittest.TestCase):
                 module.main()
             clients = plistlib.loads((root / "test-results/desktop-clients.plist").read_bytes())
             self.assertIn([str(alias), 1], clients)
-            self.assertIn([str(binary), 1], clients)
+            self.assertIn([str(binary.resolve()), 1], clients)
