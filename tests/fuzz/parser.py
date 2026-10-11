@@ -43,8 +43,11 @@ end run
 def test_one_input(data):
     text = data[:1024].decode("utf-8", errors="replace").replace("\0", "\uFFFD")
     expected = ["", "", "", "0"]
-    marker = text.strip().removeprefix("Safe title ")
-    if text.strip().startswith("Safe title "):
+    # Python and ICU differ on some control-character whitespace. Keep the
+    # exact oracle within their shared ASCII space/tab/newline contract.
+    normalized = text.strip(" \t\r\n")
+    marker = normalized.removeprefix("Safe title ")
+    if normalized.startswith("Safe title "):
         if marker in ("!1", "!2", "!3"):
             expected = ["Safe title", "", "", marker[1]]
         elif marker == "@home":
