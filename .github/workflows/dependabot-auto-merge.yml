@@ -37,6 +37,11 @@ jobs:
 
           REPO = os.environ.get('GITHUB_REPOSITORY', '')
           PASSING = {'SUCCESS', 'SKIPPED', 'NEUTRAL'}
+          REQUIRED = {
+              'Validate (macos-15)', 'Validate (macos-26)',
+              'Native macOS E2E / E2E (automator)',
+              'CodeQL (python)', 'Native parser fuzzing',
+          }
           VERSION = re.compile(
               r'^v?(\d+)\.(\d+)(?:\.(\d+))?(?:\.\d+)*(?:\+[0-9A-Za-z.\-]+)?$'
           )
@@ -87,15 +92,18 @@ jobs:
 
 
           def checks_pass(number):
-              proc = gh('pr', 'checks', str(number), '--json', 'state')
+              proc = gh('pr', 'checks', str(number), '--json', 'name,state')
               # 1 and 8 mean failing or pending checks; the states decide.
               if proc.returncode not in (0, 1, 8):
                   return False
               try:
-                  states = [c['state'] for c in json.loads(proc.stdout)]
+                  checks = json.loads(proc.stdout)
+                  states = [c['state'] for c in checks]
+                  successful = {c['name'] for c in checks if c['state'] == 'SUCCESS'}
               except (ValueError, KeyError, TypeError):
                   return False
-              return bool(states) and all(s in PASSING for s in states)
+              return (REQUIRED <= successful and bool(states)
+                      and all(s in PASSING for s in states))
 
 
           def main():

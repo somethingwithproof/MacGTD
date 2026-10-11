@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Supply-chain hardening
+
+- Added Python CodeQL security scanning and bounded Atheris fuzzing of the compiled native parser, with retained logs and reproducible failure inputs.
+- Added tested release packaging, digest checks, GitHub build attestations, and draft release creation from stable tags on `main`.
+- Added verified detached maintainer signatures for unchanged v1.0.0 and v2.0.0 downloads; these do not establish historical build provenance.
+- Dependabot monitors actual fuzzing requirements and requires successful native validation, E2E, CodeQL, and fuzzing before automatic merges.
+- Hosted dialog polling tolerates bounded transient System Events process-enumeration errors.
+
 ### API modernization
 
 - Notion capture uses API version 2026-03-11 and explicit data source parents, with unambiguous migration from existing database IDs.

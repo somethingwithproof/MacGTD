@@ -168,6 +168,7 @@ Automator bundles embed AppleScript so they can run as native Services. Alfred p
 | Scope | Environment | What is checked |
 | --- | --- | --- |
 | Validation | GitHub-hosted macOS 15 and 26 | AppleScript compilation, bundles, production parser, action targets, preferences, focus state, fixture API transport, and package round trips |
+| Security checks | GitHub-hosted Ubuntu and macOS 15 | Python CodeQL, ShellCheck, and bounded Atheris fuzzing of the compiled production parser |
 | Provider adapter E2E | GitHub-hosted `macos-15-intel` | All four production API dialogs, TLS transport, fixture persistence/readback, API failures, cancellation, and Notion source selection |
 | Live provider E2E | Manual GitHub-hosted Mac run with dedicated secrets | Real Todoist, Notion, Microsoft, and Google capture and vendor readback; fails if accounts are missing |
 | Licensed desktop integrations | Dedicated local account | Things 3, OmniFocus 4, and Alfred UI invocation and persistence |
@@ -200,6 +201,11 @@ gh workflow run e2e.yml --ref main -f test_suite=automator
 Local desktop E2E requires a dedicated logged-in test account and the permissions described in the [E2E guide](tests/e2e/README.md). The hosted permission-provisioning script is restricted to disposable GitHub-hosted jobs.
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) and follow [CONTRIBUTING.md](CONTRIBUTING.md). Recent changes are recorded in [CHANGELOG.md](CHANGELOG.md).
+
+Security controls, release signature verification, and remaining Scorecard
+limitations are documented in the [security assessment](docs/security-assessment.md).
+The release workflow builds and attests packages before creating a draft release;
+new provenance applies to those workflow builds, not older downloads.
 
 ## Project history and license
 

@@ -54,7 +54,7 @@ class Report(unittest.TextTestResult):
 
 def suite_modules(name, include_live=False):
     suites = {
-        "validation": ["support.test_harness", "support.test_validation", "support.test_components", "support.test_api_contract", "support.test_live_support"],
+        "validation": ["support.test_harness", "support.test_validation", "support.test_components", "support.test_api_contract", "support.test_live_support", "support.test_security"],
         "automator": ["support.test_native", "support.test_provider_e2e"],
         "providers": ["support.test_provider_e2e"],
         "alfred": ["support.test_alfred"],

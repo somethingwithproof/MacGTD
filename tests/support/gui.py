@@ -35,7 +35,15 @@ def dialog(text=None, button="OK", expected="", step=""):
         set lastFailure to "No matching dialog"
         tell application "System Events"
             repeat 80 times
-                repeat with p in (application processes whose name is "com.apple.automator.runner" or name is "Automator Runner" or name is "Automator")
+                set candidateProcesses to {}
+                with timeout of 2 seconds
+                    try
+                        set candidateProcesses to application processes whose name is "com.apple.automator.runner" or name is "Automator Runner" or name is "Automator"
+                    on error messageText
+                        set lastFailure to messageText
+                    end try
+                end timeout
+                repeat with p in candidateProcesses
                     set candidateWindows to {}
                     with timeout of 2 seconds
                         try

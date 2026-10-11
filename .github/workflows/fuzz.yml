@@ -1,0 +1,45 @@
+name: Parser fuzzing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '13 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parser:
+    name: Native parser fuzzing
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install native fuzzer and pinned runtime
+        run: |
+          brew install mise llvm
+          mise install
+          mise exec -- python -m venv .venv-fuzz
+          CLANG_BIN="$(brew --prefix llvm)/bin/clang" .venv-fuzz/bin/pip install --require-hashes -r tests/fuzz/requirements.txt
+      - name: Fuzz the production AppleScript parser
+        env:
+          FUZZ_RUNS: ${{ github.event_name == 'schedule' && '2048' || '128' }}
+          FUZZ_SECONDS: ${{ github.event_name == 'schedule' && '600' || '180' }}
+        run: |
+          set -euo pipefail
+          mkdir -p test-results/fuzz
+          cp -R tests/fuzz/corpus test-results/fuzz/corpus
+          .venv-fuzz/bin/python tests/fuzz/parser.py test-results/fuzz/corpus -runs="$FUZZ_RUNS" -max_total_time="$FUZZ_SECONDS" -max_len=1024 -timeout=15 -artifact_prefix=test-results/fuzz/ 2>&1 | tee test-results/fuzz/fuzzer.log
+      - name: Preserve crashing inputs and execution log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: parser-fuzz-results
+          path: test-results/
+          if-no-files-found: error
+          retention-days: 14
