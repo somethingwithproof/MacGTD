@@ -31,7 +31,7 @@ def run(*args, check=True):
     return result
 
 
-def grant(database_key, clients):
+def grant(database_key, clients, accessibility_only=False):
     # CLI input selects a fixed hosted-image database; it never becomes a connection URI.
     databases = {"system": Path("/Library/Application Support/com.apple.TCC/TCC.db"),
                  "user": Path("/Users/runner/Library/Application Support/com.apple.TCC/TCC.db")}
@@ -46,9 +46,13 @@ def grant(database_key, clients):
         if not {"service", "client", "client_type", "auth_value"}.issubset(columns):
             raise RuntimeError("Unsupported TCC schema")
         for client, kind in clients:
-            for service, target in [("kTCCServiceAccessibility", "UNUSED"),
-                                    ("kTCCServiceReminders", "UNUSED"),
-                                    ("kTCCServiceCalendar", "UNUSED")]+[("kTCCServiceAppleEvents", t) for t in targets]:
+            services = [("kTCCServiceAccessibility", "UNUSED"),
+                        ("kTCCServiceReminders", "UNUSED"),
+                        ("kTCCServiceCalendar", "UNUSED")]+[("kTCCServiceAppleEvents", t) for t in targets]
+            if accessibility_only:
+                services = [("kTCCServiceAccessibility", "UNUSED"),
+                            ("kTCCServiceAppleEvents", "com.apple.systemevents")]
+            for service, target in services:
                 values = {"service": service, "client": client, "client_type": kind,
                           "auth_value": 2, "auth_reason": 4, "auth_version": 1,
                           "csreq": None, "policy_id": None, "flags": 0,
@@ -68,17 +72,35 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database", choices=("system", "user"))
     parser.add_argument("--clients", type=Path)
+    parser.add_argument("--accessibility-only", action="store_true")
+    parser.add_argument("--refresh-accessibility", action="store_true")
     args = parser.parse_args()
     if args.database:
         if not args.clients:
             raise SystemExit("Client manifest is required")
-        grant(args.database, plistlib.loads(args.clients.read_bytes()))
+        grant(args.database, plistlib.loads(args.clients.read_bytes()), args.accessibility_only)
         return
     if os.geteuid() == 0:
         raise SystemExit("Run the coordinator as the normal GitHub runner user")
     results = ROOT / "test-results"
     results.mkdir(exist_ok=True)
+    if Path.home() != Path("/Users/runner"):
+        raise RuntimeError("Unexpected GitHub-hosted test account")
+    manifest = results / "desktop-clients.plist"
+    if args.refresh_accessibility:
+        if not manifest.is_file():
+            raise RuntimeError("Initial hosted desktop provisioning is required before refresh")
+        for database in ("system", "user"):
+            run("sudo", "env", "GITHUB_ACTIONS=true", "RUNNER_ENVIRONMENT=github-hosted",
+                sys.executable, str(Path(__file__).resolve()), "--database", database,
+                "--clients", str(manifest), "--accessibility-only")
+        run("sudo", "killall", "tccd", check=False)
+        with (results / "desktop-permission-refresh.log").open("a") as log:
+            log.write("Restored initially provisioned Accessibility and System Events grants on disposable hosted VM\n")
+        print("Hosted desktop Accessibility grants refreshed; application data was preserved")
+        return
     binaries = {"/bin/bash", "/bin/zsh", "/usr/bin/osascript", "/usr/bin/automator", str(Path(sys.executable).resolve()),
+                sys.executable,
                 "/opt/hca/hosted-compute-agent", "/opt/hca/start_hca.sh",
                 "/usr/local/opt/runner/provisioner/provisioner", "/usr/local/opt/runner/runprovisioner.sh"}
     for line in run("ps", "-axo", "comm").stdout.splitlines():
@@ -87,10 +109,7 @@ def main():
                 binaries.add(line.strip())
     clients = [[binary, 1] for binary in sorted(binaries) if Path(binary).is_file()]
     clients += [[bundle, 0] for bundle in ("com.apple.Automator", "com.apple.AutomatorRunner", "com.apple.reminders", "com.apple.iCal")]
-    manifest = results / "desktop-clients.plist"
     manifest.write_bytes(plistlib.dumps(clients))
-    if Path.home() != Path("/Users/runner"):
-        raise RuntimeError("Unexpected GitHub-hosted test account")
     for database in ("system", "user"):
         run("sudo", "env", "GITHUB_ACTIONS=true", "RUNNER_ENVIRONMENT=github-hosted",
             sys.executable, str(Path(__file__).resolve()), "--database", str(database), "--clients", str(manifest))

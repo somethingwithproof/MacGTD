@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added verified detached maintainer signatures for unchanged v1.0.0 and v2.0.0 downloads; these do not establish historical build provenance.
 - Dependabot monitors actual fuzzing requirements and requires successful native validation, E2E, CodeQL, and fuzzing before automatic merges.
 - Hosted dialog polling tolerates bounded transient System Events process-enumeration errors.
+- Hosted Accessibility denials can restore previously approved grants without restarting workflows; guarded regression checks and a live dialog/Keychain recovery test verify this path.
 
 ### API modernization
 
