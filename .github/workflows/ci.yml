@@ -29,7 +29,7 @@ jobs:
           persist-credentials: false
       - name: Install validation tools and pinned runtime
         run: |
-          brew install actionlint shellcheck mise
+          brew install actionlint shellcheck jq mise
           mise install
       - name: Lint GitHub Actions and every shell script
         run: |

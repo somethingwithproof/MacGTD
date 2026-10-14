@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -74,14 +78,27 @@ jobs:
         env:
           BUNDLE_PATH: ${{ steps.provenance.outputs.bundle-path }}
         run: |
-          cp "$BUNDLE_PATH" dist/MacGTD.zip.sigstore
-          cp "$BUNDLE_PATH" dist/MacGTD.alfredworkflow.sigstore
-      - name: Verify repository and signer workflow
+          cp "$BUNDLE_PATH" dist/MacGTD.zip.sigstore.json
+          cp "$BUNDLE_PATH" dist/MacGTD.alfredworkflow.sigstore.json
+      - name: Verify attached bundles, source, and signer workflow
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh attestation verify dist/MacGTD.zip --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
-          gh attestation verify dist/MacGTD.alfredworkflow --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
+          gh attestation verify dist/MacGTD.zip --bundle dist/MacGTD.zip.sigstore.json --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest "$GITHUB_SHA" --source-ref "$GITHUB_REF" --deny-self-hosted-runners
+          gh attestation verify dist/MacGTD.alfredworkflow --bundle dist/MacGTD.alfredworkflow.sigstore.json --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest "$GITHUB_SHA" --source-ref "$GITHUB_REF" --deny-self-hosted-runners
+      - name: Export the verified signed in-toto envelope
+        env:
+          BUNDLE_PATH: ${{ steps.provenance.outputs.bundle-path }}
+        run: |
+          jq -ce '
+            .dsseEnvelope
+            | select(.payloadType == "application/vnd.in-toto+json")
+            | select((.payload | type) == "string" and (.payload | length) > 0)
+            | select((.signatures | type) == "array" and (.signatures | length) > 0)
+            | select(all(.signatures[]; (.sig | type) == "string" and (.sig | length) > 0))
+            | select((.payload | @base64d | fromjson | ._type) == "https://in-toto.io/Statement/v1")
+            | select((.payload | @base64d | fromjson | .predicateType) == "https://slsa.dev/provenance/v1")
+          ' "$BUNDLE_PATH" > dist/MacGTD.intoto.jsonl
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: signed-release-packages
@@ -110,6 +127,7 @@ jobs:
         run: |
           cd dist
           sha256sum -c SHA256SUMS
-          gh attestation verify MacGTD.zip --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
-          gh attestation verify MacGTD.alfredworkflow --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
-          gh release create "$RELEASE_TAG" MacGTD.zip MacGTD.alfredworkflow SHA256SUMS MacGTD.zip.sigstore MacGTD.alfredworkflow.sigstore --repo "$GITHUB_REPOSITORY" --verify-tag --draft --generate-notes
+          gh attestation verify MacGTD.zip --bundle MacGTD.zip.sigstore.json --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest "$GITHUB_SHA" --source-ref "$GITHUB_REF" --deny-self-hosted-runners
+          gh attestation verify MacGTD.alfredworkflow --bundle MacGTD.alfredworkflow.sigstore.json --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest "$GITHUB_SHA" --source-ref "$GITHUB_REF" --deny-self-hosted-runners
+          jq -ce '.dsseEnvelope' MacGTD.zip.sigstore.json | cmp - MacGTD.intoto.jsonl
+          gh release create "$RELEASE_TAG" MacGTD.zip MacGTD.alfredworkflow SHA256SUMS MacGTD.zip.sigstore.json MacGTD.alfredworkflow.sigstore.json MacGTD.intoto.jsonl --repo "$GITHUB_REPOSITORY" --verify-tag --draft --generate-notes

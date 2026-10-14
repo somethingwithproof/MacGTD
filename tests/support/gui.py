@@ -5,10 +5,39 @@ from pathlib import Path
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 import uuid
 
-from support.common import RESULTS, osa, command
+from support.common import ROOT, RESULTS, osa, command
+
+_hosted_accessibility_refreshes = 0
+MAX_HOSTED_ACCESSIBILITY_REFRESHES = 2
+
+
+def respond(process, response):
+    """Recover a hosted permission denial without restarting the workflow."""
+    global _hosted_accessibility_refreshes
+    try:
+        dialog(**response)
+    except AssertionError as failure:
+        hosted = (os.environ.get("GITHUB_ACTIONS") == "true"
+                  and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"
+                  and os.environ.get("MACGTD_E2E_DEDICATED") == "1"
+                  and sys.platform == "darwin"
+                  and Path.home() == Path("/Users/runner"))
+        if (not hosted or "not allowed assistive access" not in str(failure)
+                or process.poll() is not None
+                or _hosted_accessibility_refreshes >= MAX_HOSTED_ACCESSIBILITY_REFRESHES):
+            raise
+        _hosted_accessibility_refreshes += 1
+        command(sys.executable, ROOT / "scripts/prepare-hosted-macos.py",
+                "--refresh-accessibility", timeout=60)
+        if process.poll() is not None:
+            raise failure
+        # Same process/window, one retry. The application is never relaunched.
+        # A second denial or any product failure remains blocking.
+        dialog(**response)
 
 
 @contextmanager
@@ -89,7 +118,7 @@ def workflow(source, responses=(), cancel=False):
                                    start_new_session=True, text=True)
         try:
             for response in responses:
-                dialog(**response)
+                respond(process, response)
             code = process.wait(timeout=90)
             if code and not cancel:
                 raise AssertionError(f"Automator failed ({code}); see test-results/automator.log")
