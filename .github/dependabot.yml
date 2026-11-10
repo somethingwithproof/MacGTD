@@ -24,6 +24,11 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
+    # atheris 3.1.0 publishes only Linux wheels, so the macOS line stays on
+    # 3.0.0, the last release with a source distribution. An ignore cannot be
+    # limited to one platform marker; bump the Linux line by hand.
+    ignore:
+      - dependency-name: "atheris"
     commit-message:
       prefix: "build(deps)"
     groups:
