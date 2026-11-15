@@ -115,13 +115,47 @@ def dialog(text=None, button="OK", expected="", step=""):
     osa(source, expected, button, text or "", "yes" if text is not None else "no", step, timeout=40)
 
 
+HELPER_LAUNCH_FAILURE = "communicate with a helper application"
+
+
+def _exited_output(process, output):
+    """Return what an exited automator wrote, or None while it is still running."""
+    if process.poll() is None:
+        return None
+    output.flush()
+    output.seek(0)
+    text = output.read()
+    output.seek(0, os.SEEK_END)
+    return text
+
+
 def workflow(source, responses=(), cancel=False):
     with installed(source) as target, tempfile.TemporaryFile(mode="w+") as output:
-        process = subprocess.Popen(["automator", str(target)], stdout=output, stderr=output,
-                                   start_new_session=True, text=True)
+        def launch():
+            return subprocess.Popen(["automator", str(target)], stdout=output, stderr=output,
+                                    start_new_session=True, text=True)
+
+        process = launch()
+        relaunched = False
         try:
-            for response in responses:
-                respond(process, response)
+            for index, response in enumerate(responses):
+                while True:
+                    try:
+                        respond(process, response)
+                        break
+                    except AssertionError as failure:
+                        text = _exited_output(process, output)
+                        if text is None:
+                            raise
+                        # macOS sometimes fails to start the Automator runner (XPC helper).
+                        # Before the first dialog nothing has been captured, so one relaunch
+                        # cannot duplicate a task. Any later or repeated failure stays fatal.
+                        if index == 0 and not relaunched and HELPER_LAUNCH_FAILURE in text:
+                            relaunched = True
+                            process = launch()
+                            continue
+                        raise AssertionError(f"{failure}\nAutomator exited {process.returncode} "
+                                             f"before the dialog:\n{text}") from failure
             code = process.wait(timeout=90)
             if code and not cancel:
                 raise AssertionError(f"Automator failed ({code}); see test-results/automator.log")

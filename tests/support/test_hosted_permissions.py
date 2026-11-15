@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 """Permission recovery must be hosted-only, bounded, and preserve execution."""
+from contextlib import nullcontext
 import os
 import importlib.util
 from pathlib import Path
@@ -151,3 +152,71 @@ class HostedPermissions(unittest.TestCase):
                 with patch.object(module.sys, "argv", [str(source), "--database", "user"]):
                     module.main()
             grant.assert_called_once_with("user", [["/bin/zsh", 1]], False)
+
+
+class FakeAutomator:
+    """A finished or running automator process that wrote `text` to its output."""
+
+    def __init__(self, stdout, text, returncode):
+        stdout.write(text)
+        stdout.flush()
+        self.pid = 4242
+        self.returncode = returncode
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        return self.returncode
+
+
+class AutomatorLaunch(unittest.TestCase):
+    helper = "Couldn’t communicate with a helper application.\n"
+    missing = AssertionError("Expected Automator dialog did not respond: Quick: No matching dialog")
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        for replacement in (
+            patch.object(gui, "RESULTS", root),
+            patch.object(gui, "installed", side_effect=lambda source: nullcontext(root / "x.workflow")),
+            patch.object(gui, "command"),
+            patch.object(gui, "osa"),
+        ):
+            replacement.start()
+            self.addCleanup(replacement.stop)
+
+    def launches(self, *outcomes):
+        outcomes = list(outcomes)
+        return patch.object(gui.subprocess, "Popen", side_effect=lambda *a, **k: FakeAutomator(
+            k["stdout"], *outcomes.pop(0)))
+
+    def test_helper_failure_before_first_dialog_relaunches_once(self):
+        with self.launches((self.helper, 255), ("{}\n", 0)) as popen, \
+                patch.object(gui, "dialog", side_effect=[self.missing, None]) as dialog:
+            log = gui.workflow(Path("x.workflow"), [{"expected": "Quick"}])
+        self.assertEqual(popen.call_count, 2)
+        self.assertEqual(dialog.call_count, 2)
+        self.assertIn("helper application", log)
+
+    def test_second_helper_failure_is_not_retried(self):
+        with self.launches((self.helper, 255), (self.helper, 255)) as popen, \
+                patch.object(gui, "dialog", side_effect=[self.missing, self.missing]):
+            with self.assertRaisesRegex(AssertionError, "exited 255 before the dialog"):
+                gui.workflow(Path("x.workflow"), [{"expected": "Quick"}])
+        self.assertEqual(popen.call_count, 2)
+
+    def test_helper_failure_after_a_delivered_response_is_not_retried(self):
+        with self.launches((self.helper, 255)) as popen, \
+                patch.object(gui, "dialog", side_effect=[None, self.missing]):
+            with self.assertRaises(AssertionError):
+                gui.workflow(Path("x.workflow"), [{"expected": "Quick"}, {"expected": "Review"}])
+        self.assertEqual(popen.call_count, 1)
+
+    def test_exited_automator_reports_its_own_output(self):
+        with self.launches(("The action failed: boom\n", 255)) as popen, \
+                patch.object(gui, "dialog", side_effect=[self.missing]):
+            with self.assertRaisesRegex(AssertionError, r"(?s)exited 255 before the dialog.*boom"):
+                gui.workflow(Path("x.workflow"), [{"expected": "Quick"}])
+        self.assertEqual(popen.call_count, 1)
