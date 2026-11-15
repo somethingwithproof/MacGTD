@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 variable "aws_region" {
   description = "AWS region for the Mac dedicated host"
   type        = string

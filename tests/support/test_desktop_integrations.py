@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Licensed app E2E for a dedicated logged-in Mac; missing apps fail, never skip."""
 import unittest
 import uuid

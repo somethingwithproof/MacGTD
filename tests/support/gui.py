@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Execute installed Automator bundles and drive their real dialogs."""
 from contextlib import contextmanager
 import os

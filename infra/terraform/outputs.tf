@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 output "instance_public_ip" {
   description = "Public IP of the Mac runner"
   value       = aws_instance.mac_runner.public_ip

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Regression checks for CI failure propagation, timeouts, and JUnit output."""
 import io
 import sys

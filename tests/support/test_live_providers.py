@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Real vendor persistence via production Automator dialogs; no optional skips."""
 import os
 from urllib.parse import quote
