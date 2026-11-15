@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Inject one controller denial, then verify real hosted UI/Keychain capture.
 
 Only the first controller call is fault-injected. Permission refresh, the

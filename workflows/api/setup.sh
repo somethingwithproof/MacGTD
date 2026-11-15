@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 set -euo pipefail
 provider=${1:?Usage: setup.sh notion|todoist|microsoft|google}
 target_account=""

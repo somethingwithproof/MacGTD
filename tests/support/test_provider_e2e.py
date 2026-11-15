@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Full production Automator dialogs through verified HTTPS fixture persistence.
 
 This is deterministic adapter E2E, not evidence of live vendor compatibility.

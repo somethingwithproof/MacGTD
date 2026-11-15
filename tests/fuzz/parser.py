@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Fuzz the real parser without calling its record-creation entry point.
 
 Atheris guides mutations through the Python oracle, not AppleScript bytecode.

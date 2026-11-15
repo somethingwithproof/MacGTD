@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 # MacGTD Menu Bar Helper
 # Designed for use with SwiftBar, xbar, or BitBar
 # Install: brew install swiftbar

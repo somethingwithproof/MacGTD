@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Provision only GitHub's disposable macOS VM for native desktop tests.
 
 GitHub's own runner image provisions TCC records similarly:

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Permission recovery must be hosted-only, bounded, and preserve execution."""
 import os
 import importlib.util

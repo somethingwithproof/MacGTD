@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
+# SPDX-License-Identifier: MIT
+
 """Live tests use dedicated targets, never log tokens, and remove only owned records."""
 from contextlib import contextmanager
 import json
