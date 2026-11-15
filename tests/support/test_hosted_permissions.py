@@ -203,7 +203,7 @@ class AutomatorLaunch(unittest.TestCase):
     def test_second_helper_failure_is_not_retried(self):
         with self.launches((self.helper, 255), (self.helper, 255)) as popen, \
                 patch.object(gui, "dialog", side_effect=[self.missing, self.missing]):
-            with self.assertRaises(AssertionError):
+            with self.assertRaisesRegex(AssertionError, "exited 255 before the dialog"):
                 gui.workflow(Path("x.workflow"), [{"expected": "Quick"}])
         self.assertEqual(popen.call_count, 2)
 

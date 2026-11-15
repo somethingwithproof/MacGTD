@@ -139,22 +139,23 @@ def workflow(source, responses=(), cancel=False):
         relaunched = False
         try:
             for index, response in enumerate(responses):
-                try:
-                    respond(process, response)
-                except AssertionError as failure:
-                    text = _exited_output(process, output)
-                    if text is None:
-                        raise
-                    # macOS sometimes fails to start the Automator runner (XPC helper).
-                    # Before the first dialog nothing has been captured, so one relaunch
-                    # cannot duplicate a task. Any later or repeated failure stays fatal.
-                    if index == 0 and not relaunched and HELPER_LAUNCH_FAILURE in text:
-                        relaunched = True
-                        process = launch()
+                while True:
+                    try:
                         respond(process, response)
-                        continue
-                    raise AssertionError(f"{failure}\nAutomator exited {process.returncode} "
-                                         f"before the dialog:\n{text}") from failure
+                        break
+                    except AssertionError as failure:
+                        text = _exited_output(process, output)
+                        if text is None:
+                            raise
+                        # macOS sometimes fails to start the Automator runner (XPC helper).
+                        # Before the first dialog nothing has been captured, so one relaunch
+                        # cannot duplicate a task. Any later or repeated failure stays fatal.
+                        if index == 0 and not relaunched and HELPER_LAUNCH_FAILURE in text:
+                            relaunched = True
+                            process = launch()
+                            continue
+                        raise AssertionError(f"{failure}\nAutomator exited {process.returncode} "
+                                             f"before the dialog:\n{text}") from failure
             code = process.wait(timeout=90)
             if code and not cancel:
                 raise AssertionError(f"Automator failed ({code}); see test-results/automator.log")
