@@ -128,3 +128,26 @@ class HostedPermissions(unittest.TestCase):
             clients = plistlib.loads((root / "test-results/desktop-clients.plist").read_bytes())
             self.assertIn([str(alias), 1], clients)
             self.assertIn([str(binary.resolve()), 1], clients)
+
+    def test_privileged_child_reads_only_the_fixed_manifest(self):
+        source = gui.ROOT / "scripts/prepare-hosted-macos.py"
+        spec = importlib.util.spec_from_file_location("hosted_preparer_manifest_test", source)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(module, "ROOT", root), patch.object(module, "grant") as grant:
+                with patch.object(module.sys, "argv", [str(source), "--database", "user"]):
+                    with self.assertRaises(SystemExit):
+                        module.main()
+                grant.assert_not_called()
+                with patch.object(module.sys, "argv", [str(source), "--database", "user",
+                                                       "--clients", str(root / "other.plist")]), \
+                        patch("sys.stderr"):
+                    with self.assertRaises(SystemExit):
+                        module.main()
+                (root / "test-results").mkdir()
+                (root / "test-results/desktop-clients.plist").write_bytes(plistlib.dumps([["/bin/zsh", 1]]))
+                with patch.object(module.sys, "argv", [str(source), "--database", "user"]):
+                    module.main()
+            grant.assert_called_once_with("user", [["/bin/zsh", 1]], False)

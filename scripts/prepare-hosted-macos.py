@@ -17,6 +17,11 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def client_manifest():
+    # The privileged child reads only this fixed path, never a path from argv.
+    return ROOT / "test-results" / "desktop-clients.plist"
+
+
 def require_hosted():
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
         raise SystemExit("Desktop provisioning is restricted to GitHub-hosted disposable runners")
@@ -71,14 +76,14 @@ def main():
     require_hosted()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database", choices=("system", "user"))
-    parser.add_argument("--clients", type=Path)
     parser.add_argument("--accessibility-only", action="store_true")
     parser.add_argument("--refresh-accessibility", action="store_true")
     args = parser.parse_args()
     if args.database:
-        if not args.clients:
+        manifest = client_manifest()
+        if not manifest.is_file():
             raise SystemExit("Client manifest is required")
-        grant(args.database, plistlib.loads(args.clients.read_bytes()), args.accessibility_only)
+        grant(args.database, plistlib.loads(manifest.read_bytes()), args.accessibility_only)
         return
     if os.geteuid() == 0:
         raise SystemExit("Run the coordinator as the normal GitHub runner user")
@@ -86,14 +91,14 @@ def main():
     results.mkdir(exist_ok=True)
     if Path.home() != Path("/Users/runner"):
         raise RuntimeError("Unexpected GitHub-hosted test account")
-    manifest = results / "desktop-clients.plist"
+    manifest = client_manifest()
     if args.refresh_accessibility:
         if not manifest.is_file():
             raise RuntimeError("Initial hosted desktop provisioning is required before refresh")
         for database in ("system", "user"):
             run("sudo", "env", "GITHUB_ACTIONS=true", "RUNNER_ENVIRONMENT=github-hosted",
                 sys.executable, str(Path(__file__).resolve()), "--database", database,
-                "--clients", str(manifest), "--accessibility-only")
+                "--accessibility-only")
         run("sudo", "killall", "tccd", check=False)
         with (results / "desktop-permission-refresh.log").open("a") as log:
             log.write("Restored initially provisioned Accessibility and System Events grants on disposable hosted VM\n")
@@ -112,7 +117,7 @@ def main():
     manifest.write_bytes(plistlib.dumps(clients))
     for database in ("system", "user"):
         run("sudo", "env", "GITHUB_ACTIONS=true", "RUNNER_ENVIRONMENT=github-hosted",
-            sys.executable, str(Path(__file__).resolve()), "--database", str(database), "--clients", str(manifest))
+            sys.executable, str(Path(__file__).resolve()), "--database", str(database))
     # Refresh only this disposable VM's permission daemon; preflight verifies grants.
     run("sudo", "killall", "tccd", check=False)
     run("open", "-a", "Reminders")
