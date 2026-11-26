@@ -81,6 +81,8 @@ class I18nTests(unittest.TestCase):
                 self.assertIn("tomorrow 2pm 1h", catalog["dialog.event_capture_prompt"])
                 self.assertIn("!1/!2/!3", catalog["dialog.quick_capture_prompt"])
                 self.assertIn("due:today/tomorrow/", catalog["dialog.quick_capture_prompt"])
+        self.assertIn("@context", sr["dialog.quick_capture_prompt"])
+        self.assertIn("+project", sr["dialog.quick_capture_prompt"])
 
     def test_normalize_locale(self) -> None:
         cases = (

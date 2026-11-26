@@ -4,7 +4,7 @@
   "dialog.event_created": "Догађај је креиран: {title}",
   "dialog.event_duration_positive": "Трајање догађаја мора бити позитивна вредност",
   "dialog.event_title_empty": "Назив догађаја не може бити празан",
-  "dialog.quick_capture_prompt": "Унесите задатак (!1/!2/!3 приоритет, due:today/tomorrow/датум, @контекст, +пројекат):",
+  "dialog.quick_capture_prompt": "Унесите задатак (!1/!2/!3 приоритет, due:today/tomorrow/YYYY-MM-DD, @context, +project):",
   "dialog.quick_capture_title": "Брзи унос",
   "i18n.cli_description": "Превођење корисничких порука алата MacGTD за активни локалитет.",
   "i18n.key_help": "Кључ поруке за претрагу",
