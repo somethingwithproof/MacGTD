@@ -10,12 +10,13 @@ cd "$REPO_ROOT"
 PACKAGE_DIR=$(mktemp -d "$REPO_ROOT/dist/.release.XXXXXX")
 trap 'rm -rf "$PACKAGE_DIR"' EXIT
 cp -R workflows "$PACKAGE_DIR/workflows"
+cp -R locales "$PACKAGE_DIR/locales"
 # Ship the library compiled from current source, with its editable source.
 rm -rf "$PACKAGE_DIR/workflows/alfred/GTDLib.scptd"
 cp -R dist/GTDLib.scptd "$PACKAGE_DIR/workflows/alfred/GTDLib.scptd"
 cp LICENSE README.md "$PACKAGE_DIR/"
 cd "$PACKAGE_DIR"
-zip -r MacGTD.zip workflows LICENSE README.md -x '*.DS_Store'
+zip -r MacGTD.zip workflows locales LICENSE README.md -x '*.DS_Store'
 unzip -t MacGTD.zip
 mv MacGTD.zip "$REPO_ROOT/dist/MacGTD.zip"
 cd "$REPO_ROOT/dist"

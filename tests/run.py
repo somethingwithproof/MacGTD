@@ -12,6 +12,8 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tests"))
+sys.path.insert(0, str(ROOT / "scripts"))
+from i18n import set_locale, t
 
 
 class Report(unittest.TextTestResult):
@@ -57,7 +59,7 @@ class Report(unittest.TextTestResult):
 
 def suite_modules(name, include_live=False):
     suites = {
-        "validation": ["support.test_harness", "support.test_validation", "support.test_components", "support.test_api_contract", "support.test_live_support", "support.test_security", "support.test_hosted_permissions"],
+        "validation": ["support.test_harness", "support.test_validation", "support.test_i18n", "support.test_components", "support.test_api_contract", "support.test_live_support", "support.test_security", "support.test_hosted_permissions"],
         "automator": ["support.test_native", "support.test_provider_e2e"],
         "providers": ["support.test_provider_e2e"],
         "alfred": ["support.test_alfred"],
@@ -68,17 +70,19 @@ def suite_modules(name, include_live=False):
     modules = list(suites[name])
     if include_live:
         if name != "all":
-            raise ValueError("--live is only supported with the all suite")
+            raise ValueError(t("runner.live_all_only"))
         modules += ["support.test_live_providers", "support.test_desktop_integrations"]
     return modules
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=t("runner.description"))
     parser.add_argument("suite", choices=("validation", "all", "alfred", "automator", "providers", "live", "desktop-integrations"))
-    parser.add_argument("--filter", help="Run tests whose IDs contain this text")
-    parser.add_argument("--live", action="store_true", help="Include required live APIs and licensed apps in the all suite")
+    parser.add_argument("--filter", help=t("runner.filter_help"))
+    parser.add_argument("--live", action="store_true", help=t("runner.live_help"))
+    parser.add_argument("--lang", default=None, help=t("runner.lang_help"))
     args = parser.parse_args()
+    set_locale(args.lang)
     os.chdir(ROOT)
     results = ROOT / "test-results"
     results.mkdir(exist_ok=True)
@@ -106,8 +110,17 @@ def main():
         key = {"failure": "failures", "error": "errors", "skipped": "skipped"}[status]
         result.xml.set(key, str(len(result.xml.findall(f"testcase/{status}"))))
     ET.ElementTree(result.xml).write(results / f"{args.suite}.xml", encoding="utf-8", xml_declaration=True)
-    summary = (f"{args.suite}: {result.testsRun} tests, {len(result.failures)} failures, "
-               f"{len(result.errors)} errors, {len(result.skipped)} skipped\n")
+    summary = (
+        t(
+            "runner.summary",
+            suite=args.suite,
+            tests=result.testsRun,
+            failures=len(result.failures),
+            errors=len(result.errors),
+            skipped=len(result.skipped),
+        )
+        + "\n"
+    )
     (results / f"{args.suite}-summary.txt").write_text(summary)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as stream:

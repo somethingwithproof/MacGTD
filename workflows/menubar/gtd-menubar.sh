@@ -9,11 +9,34 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+I18N_HELPER="${SCRIPT_DIR}/../../scripts/i18n.py"
+
+msg() {
+    local key="$1"
+    local fallback="$2"
+    shift 2
+    if [[ -f "$I18N_HELPER" ]] && command -v python3 >/dev/null 2>&1; then
+        python3 "$I18N_HELPER" "$key" "$@" 2>/dev/null || printf '%s\n' "$fallback"
+    else
+        printf '%s\n' "$fallback"
+    fi
+}
+
 # Get inbox count
 INBOX_COUNT=$(osascript -e 'tell application "Reminders" to return count of (reminders in list "Inbox" whose completed is false)' 2>/dev/null || echo "?")
 
 # Get overdue count
 OVERDUE_COUNT=$(osascript -e 'tell application "Reminders" to return count of (reminders whose completed is false and due date < (current date))' 2>/dev/null || echo "0")
+
+LABEL_QUICK=$(msg "menubar.quick_capture" "GTD Quick Capture")
+LABEL_CLIP=$(msg "menubar.clipboard_capture" "GTD Clipboard Capture")
+LABEL_BATCH=$(msg "menubar.batch_capture" "GTD Batch Capture")
+LABEL_INBOX=$(msg "menubar.inbox_tasks" "Inbox: ${INBOX_COUNT} tasks" "count=${INBOX_COUNT}")
+LABEL_OVERDUE=$(msg "menubar.overdue_tasks" "Overdue: ${OVERDUE_COUNT} tasks" "count=${OVERDUE_COUNT}")
+LABEL_OPEN=$(msg "menubar.open_reminders" "Open Reminders")
+LABEL_WEEKLY=$(msg "menubar.weekly_review" "Weekly Review")
+LABEL_REFRESH=$(msg "menubar.refresh" "Refresh")
 
 # Menu bar title
 if [[ "$OVERDUE_COUNT" != "0" && "$OVERDUE_COUNT" != "?" ]]; then
@@ -23,12 +46,12 @@ else
 fi
 
 echo "---"
-echo "GTD Quick Capture | bash='osascript' param1='-e' param2='tell application \"Automator\" to open POSIX file \"/Users/$USER/Library/Services/GTD-QuickCapture.workflow\"' terminal=false"
-echo "GTD Clipboard Capture | bash='osascript' param1='-e' param2='tell application \"Automator\" to open POSIX file \"/Users/$USER/Library/Services/GTD-ClipboardCapture.workflow\"' terminal=false"
-echo "GTD Batch Capture | bash='osascript' param1='-e' param2='tell application \"Automator\" to open POSIX file \"/Users/$USER/Library/Services/GTD-BatchCapture.workflow\"' terminal=false"
+echo "${LABEL_QUICK} | bash='osascript' param1='-e' param2='tell application \"Automator\" to open POSIX file \"/Users/$USER/Library/Services/GTD-QuickCapture.workflow\"' terminal=false"
+echo "${LABEL_CLIP} | bash='osascript' param1='-e' param2='tell application \"Automator\" to open POSIX file \"/Users/$USER/Library/Services/GTD-ClipboardCapture.workflow\"' terminal=false"
+echo "${LABEL_BATCH} | bash='osascript' param1='-e' param2='tell application \"Automator\" to open POSIX file \"/Users/$USER/Library/Services/GTD-BatchCapture.workflow\"' terminal=false"
 echo "---"
-echo "Inbox: ${INBOX_COUNT} tasks"
-echo "Overdue: ${OVERDUE_COUNT} tasks"
+echo "${LABEL_INBOX}"
+echo "${LABEL_OVERDUE}"
 echo "---"
 
 # List all reminders lists with counts
@@ -49,7 +72,7 @@ end tell
 done
 
 echo "---"
-echo "Open Reminders | bash='open' param1='-a' param2='Reminders' terminal=false"
-echo "Weekly Review | bash='osascript' param1='-e' param2='tell application \"Automator\" to open POSIX file \"/Users/$USER/Library/Services/GTD-WeeklyReview.workflow\"' terminal=false"
+echo "${LABEL_OPEN} | bash='open' param1='-a' param2='Reminders' terminal=false"
+echo "${LABEL_WEEKLY} | bash='osascript' param1='-e' param2='tell application \"Automator\" to open POSIX file \"/Users/$USER/Library/Services/GTD-WeeklyReview.workflow\"' terminal=false"
 echo "---"
-echo "Refresh | refresh=true"
+echo "${LABEL_REFRESH} | refresh=true"
