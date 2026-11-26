@@ -4,7 +4,7 @@
 [![Native E2E](https://github.com/somethingwithproof/MacGTD/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/somethingwithproof/MacGTD/actions/workflows/e2e.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=somethingwithproof_MacGTD&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=somethingwithproof_MacGTD)
 [![Release](https://img.shields.io/github/v/release/somethingwithproof/MacGTD)](https://github.com/somethingwithproof/MacGTD/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](../../../LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/somethingwithproof/MacGTD/badge)](https://scorecard.dev/viewer/?uri=github.com/somethingwithproof/MacGTD)
 
 **Languages:** [English](../../../README.md) · [Deutsch](../de/README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Italiano](../it/README.md) · [Português (BR)](../pt-BR/README.md) · [Nederlands](../nl/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [日本語](../ja/README.md) · [한국어](../ko/README.md) · [简体中文](../zh-CN/README.md) · [繁體中文](../zh-TW/README.md) · [العربية](../ar/README.md) · [हिन्दी](../hi/README.md) · [Polski](../pl/README.md) · [Türkçe](../tr/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Bahasa Indonesia](../id/README.md)
@@ -170,6 +170,8 @@ Automator தொகுப்புகள் இயல்பு Services ஆக �
 | [`tests/`](../../../tests/) | சரிபார்ப்பு, கூறுச் சோதனைகள் மற்றும் இயல்பு டெஸ்க்டாப் E2E |
 | [`.github/workflows/`](../../../.github/workflows/) | CI, இரவுநேர/கைமுறை E2E மற்றும் களஞ்சியப் பராமரிப்பு |
 | [`infra/`](../../../infra/) | விருப்பத்தேர்வு உள்ளூர் மற்றும் EC2 Mac ரன்னர் அமைப்பு; ஹோஸ்ட் செய்யப்பட்ட CI க்கு இது தேவையில்லை |
+
+<a name="testing-and-compatibility"></a>
 
 ## சோதனை மற்றும் இணக்கத்தன்மை
 

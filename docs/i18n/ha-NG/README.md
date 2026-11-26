@@ -4,7 +4,7 @@
 [![Native E2E](https://github.com/somethingwithproof/MacGTD/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/somethingwithproof/MacGTD/actions/workflows/e2e.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=somethingwithproof_MacGTD&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=somethingwithproof_MacGTD)
 [![Release](https://img.shields.io/github/v/release/somethingwithproof/MacGTD)](https://github.com/somethingwithproof/MacGTD/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](../../../LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/somethingwithproof/MacGTD/badge)](https://scorecard.dev/viewer/?uri=github.com/somethingwithproof/MacGTD)
 
 **Languages:** [English](../../../README.md) · [Deutsch](../de/README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Italiano](../it/README.md) · [Português (BR)](../pt-BR/README.md) · [Nederlands](../nl/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [日本語](../ja/README.md) · [한국어](../ko/README.md) · [简体中文](../zh-CN/README.md) · [繁體中文](../zh-TW/README.md) · [العربية](../ar/README.md) · [हिन्दी](../hi/README.md) · [Polski](../pl/README.md) · [Türkçe](../tr/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Bahasa Indonesia](../id/README.md)
@@ -170,6 +170,8 @@ Kunshin Automator suna haɗa AppleScript a cikinsu domin su iya yin aiki a matsa
 | [`tests/`](../../../tests/) | Tabbatarwa, binciken sassa, da gwajin E2E na kwamfutar tebur ta asali |
 | [`.github/workflows/`](../../../.github/workflows/) | CI, gwajin E2E na dare/hannu, da kula da ma'ajiyar lamba |
 | [`infra/`](../../../infra/) | Saitin mai gudanar da Mac na gida da EC2 na zaɓi; CI na sabar ba ya buƙatarsa |
+
+<a name="testing-and-compatibility"></a>
 
 ## Gwaji da dacewa
 

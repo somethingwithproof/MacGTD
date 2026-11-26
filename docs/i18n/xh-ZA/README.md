@@ -4,7 +4,7 @@
 [![Native E2E](https://github.com/somethingwithproof/MacGTD/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/somethingwithproof/MacGTD/actions/workflows/e2e.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=somethingwithproof_MacGTD&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=somethingwithproof_MacGTD)
 [![Release](https://img.shields.io/github/v/release/somethingwithproof/MacGTD)](https://github.com/somethingwithproof/MacGTD/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](../../../LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/somethingwithproof/MacGTD/badge)](https://scorecard.dev/viewer/?uri=github.com/somethingwithproof/MacGTD)
 
 **Languages:** [English](../../../README.md) · [Deutsch](../de/README.md) · [Español](../es/README.md) · [Français](../fr/README.md) · [Italiano](../it/README.md) · [Português (BR)](../pt-BR/README.md) · [Nederlands](../nl/README.md) · [Русский](../ru/README.md) · [Українська](../uk/README.md) · [日本語](../ja/README.md) · [한국어](../ko/README.md) · [简体中文](../zh-CN/README.md) · [繁體中文](../zh-TW/README.md) · [العربية](../ar/README.md) · [हिन्दी](../hi/README.md) · [Polski](../pl/README.md) · [Türkçe](../tr/README.md) · [Svenska](../sv/README.md) · [Tiếng Việt](../vi/README.md) · [Bahasa Indonesia](../id/README.md)
@@ -170,6 +170,8 @@ Iibhandile ze-Automator zifaka i-AppleScript ngaphakathi ukuze zikwazi ukusebenz
 | [`tests/`](../../../tests/) | Ukuqinisekisa, uhlolo lwamacandelo, kunye ne-E2E yedesktop yomthonyama |
 | [`.github/workflows/`](../../../.github/workflows/) | I-CI, i-E2E yasebusuku/yesandla, kunye nokugcinwa kwindawo yokugcina ikhowudi |
 | [`infra/`](../../../infra/) | Ukusetwa kokuzikhethela kwe-runner ye-Mac yasekhaya neye-EC2; i-CI ekwi-host ayikudingi oku |
+
+<a name="testing-and-compatibility"></a>
 
 ## Uvavanyo nokuhambelana
 
