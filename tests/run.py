@@ -76,6 +76,11 @@ def suite_modules(name, include_live=False):
 
 
 def main():
+    from i18n import extract_lang
+
+    pre_lang = extract_lang(sys.argv[1:])
+    if pre_lang is not None:
+        set_locale(pre_lang)
     parser = argparse.ArgumentParser(description=t("runner.description"))
     parser.add_argument("suite", choices=("validation", "all", "alfred", "automator", "providers", "live", "desktop-integrations"))
     parser.add_argument("--filter", help=t("runner.filter_help"))

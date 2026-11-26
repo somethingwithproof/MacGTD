@@ -1,5 +1,5 @@
 {
-  "dialog.event_capture_prompt": "Ange händelse (t.ex. Möte imorgon 14:00 1h @Konferensrum):",
+  "dialog.event_capture_prompt": "Ange händelse (t.ex. Möte tomorrow 2pm 1h @Konferensrum):",
   "dialog.event_capture_title": "GTD Snabbfångst av händelse",
   "dialog.event_created": "Händelse skapad: {title}",
   "dialog.event_duration_positive": "Händelsens varaktighet måste vara positiv",

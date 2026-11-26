@@ -22,6 +22,7 @@ PLACEHOLDER_RE = re.compile(r"\{[a-zA-Z0-9_]+\}")
 class I18nTests(unittest.TestCase):
     def setUp(self) -> None:
         self._saved_env = {k: os.environ.get(k) for k in ("LC_ALL", "LC_MESSAGES", "LANG")}
+        self._saved_override = i18n._active_locale
         for var in self._saved_env:
             os.environ.pop(var, None)
         i18n.set_locale(None)
@@ -32,7 +33,7 @@ class I18nTests(unittest.TestCase):
                 os.environ.pop(var, None)
             else:
                 os.environ[var] = val
-        i18n.set_locale(None)
+        i18n.set_locale(self._saved_override)
 
     def test_all_20_locales_load_with_key_and_placeholder_parity(self) -> None:
         self.assertEqual(len(i18n.SUPPORTED_LOCALES), 20)
@@ -59,11 +60,15 @@ class I18nTests(unittest.TestCase):
             ("de_DE.UTF-8", "de"),
             ("zh_TW", "zh-TW"),
             ("zh_HK.UTF-8", "zh-TW"),
+            ("zh-TW-u-ca-gregory", "zh-TW"),
+            ("zh-HK-x-private", "zh-TW"),
             ("zh-Hant-TW", "zh-TW"),
+            ("zh-Hans-TW", "zh-CN"),
             ("zh_CN.UTF-8", "zh-CN"),
             ("zh", "zh-CN"),
             ("pt_BR.UTF-8", "pt-BR"),
             ("pt_PT", "pt-BR"),
+            ("x-private", "en"),
             ("xx_YY", "en"),
         )
         for raw, expected in cases:
@@ -108,3 +113,32 @@ class I18nTests(unittest.TestCase):
             timeout=10,
         )
         self.assertEqual(de.stdout.strip(), i18n.t("menubar.inbox_tasks", locale="de", count=5))
+
+        env = {k: v for k, v in os.environ.items() if k not in {"LC_ALL", "LC_MESSAGES", "LANG"}}
+        env["LC_ALL"] = "C"
+        env["COLUMNS"] = "200"
+        de_help = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/i18n.py"), "--lang", "de", "--help"],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        )
+        self.assertIn(
+            " ".join(i18n.t("i18n.cli_description", locale="de").split()),
+            " ".join(de_help.stdout.split()),
+        )
+
+        runner_help = subprocess.run(
+            [sys.executable, str(ROOT / "tests/run.py"), "--lang", "de", "--help"],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        )
+        self.assertIn(
+            " ".join(i18n.t("runner.description", locale="de").split()),
+            " ".join(runner_help.stdout.split()),
+        )

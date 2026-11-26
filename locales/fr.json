@@ -1,5 +1,5 @@
 {
-  "dialog.event_capture_prompt": "Saisir un événement (ex. : Réunion demain 14h 1h @Salle de conférence) :",
+  "dialog.event_capture_prompt": "Saisir un événement (ex. : Réunion tomorrow 2pm 1h @Salle de conférence) :",
   "dialog.event_capture_title": "Capture rapide d'événement GTD",
   "dialog.event_created": "Événement créé : {title}",
   "dialog.event_duration_positive": "La durée de l'événement doit être positive",

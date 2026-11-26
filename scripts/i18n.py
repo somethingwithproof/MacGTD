@@ -40,7 +40,7 @@ SUPPORTED_LOCALES: tuple[str, ...] = (
 )
 
 _LOCALE_BY_LOWER: dict[str, str] = {loc.lower(): loc for loc in SUPPORTED_LOCALES}
-_ZH_TRADITIONAL = frozenset({"zh-tw", "zh-hk", "zh-mo", "zh-hant"})
+_ZH_TRADITIONAL_REGIONS = frozenset({"tw", "hk", "mo"})
 _active_locale: str | None = None
 
 
@@ -51,16 +51,26 @@ def normalize_locale(raw: str | None) -> str:
     cleaned = raw.strip().split(".", 1)[0].split("@", 1)[0]
     if not cleaned or cleaned.upper() in {"C", "POSIX"}:
         return DEFAULT_LOCALE
-    tag = cleaned.replace("_", "-").lower()
+    base_parts: list[str] = []
+    for part in cleaned.replace("_", "-").lower().split("-"):
+        if len(part) == 1:
+            break
+        base_parts.append(part)
+    if not base_parts:
+        return DEFAULT_LOCALE
+    tag = "-".join(base_parts)
     if tag in _LOCALE_BY_LOWER:
         return _LOCALE_BY_LOWER[tag]
-    if tag in _ZH_TRADITIONAL or tag.startswith("zh-hant-"):
-        return "zh-TW"
-    if tag == "zh" or tag.startswith("zh-"):
+    primary = base_parts[0]
+    if primary == "zh":
+        subtags = set(base_parts[1:])
+        if "hans" in subtags:
+            return "zh-CN"
+        if "hant" in subtags or subtags & _ZH_TRADITIONAL_REGIONS:
+            return "zh-TW"
         return "zh-CN"
-    if tag == "pt" or tag.startswith("pt-"):
+    if primary == "pt":
         return "pt-BR"
-    primary = tag.split("-", 1)[0]
     return _LOCALE_BY_LOWER.get(primary, DEFAULT_LOCALE)
 
 
@@ -110,15 +120,40 @@ def t(key: str, *, locale: str | None = None, **kwargs: object) -> str:
     return template.format(**kwargs) if kwargs else template
 
 
+def extract_lang(argv: list[str] | None) -> str | None:
+    """Read the final --lang value before argparse runs so --help uses it."""
+    raw = sys.argv[1:] if argv is None else argv
+    found: str | None = None
+    idx = 0
+    while idx < len(raw):
+        arg = raw[idx]
+        if arg == "--":
+            break
+        if arg == "--lang" and idx + 1 < len(raw):
+            found = raw[idx + 1]
+            idx += 2
+            continue
+        if arg.startswith("--lang="):
+            found = arg.split("=", 1)[1]
+        idx += 1
+    return found
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point for looking up localized strings from shell/AppleScript."""
-    parser = argparse.ArgumentParser(description=t("i18n.cli_description"))
-    parser.add_argument("key", nargs="?", help=t("i18n.key_help"))
-    parser.add_argument("--lang", default=None, help=t("i18n.lang_help"))
+    pre_lang = extract_lang(argv)
+    help_locale = pre_lang if pre_lang is not None else None
+    parser = argparse.ArgumentParser(
+        description=t("i18n.cli_description", locale=help_locale)
+    )
+    parser.add_argument("key", nargs="?", help=t("i18n.key_help", locale=help_locale))
+    parser.add_argument(
+        "--lang", default=None, help=t("i18n.lang_help", locale=help_locale)
+    )
     parser.add_argument(
         "--list-locales",
         action="store_true",
-        help=t("i18n.list_locales_help"),
+        help=t("i18n.list_locales_help", locale=help_locale),
     )
     parser.add_argument("params", nargs="*", help="Optional key=value substitutions")
     args = parser.parse_args(argv)
