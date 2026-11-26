@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Thomas Vincent <thomasvincent@gmail.com>
 # SPDX-License-Identifier: MIT
 
-"""Tests for 20-locale i18n support in MacGTD."""
+"""Tests for 45-locale i18n support in MacGTD."""
 
 from __future__ import annotations
 
@@ -35,8 +35,8 @@ class I18nTests(unittest.TestCase):
                 os.environ[var] = val
         i18n.set_locale(self._saved_override)
 
-    def test_all_20_locales_load_with_key_and_placeholder_parity(self) -> None:
-        self.assertEqual(len(i18n.SUPPORTED_LOCALES), 20)
+    def test_all_45_locales_load_with_key_and_placeholder_parity(self) -> None:
+        self.assertEqual(len(i18n.SUPPORTED_LOCALES), 45)
         en = i18n.load_catalog(i18n.DEFAULT_LOCALE)
         self.assertGreater(len(en), 0)
         for locale in i18n.SUPPORTED_LOCALES:
@@ -69,6 +69,34 @@ class I18nTests(unittest.TestCase):
             ("pt_BR.UTF-8", "pt-BR"),
             ("pt_PT", "pt-BR"),
             ("x-private", "en"),
+            ("ar_EG.UTF-8", "ar-EG"),
+            ("ar-MA-u-nu-latn", "ar-MA"),
+            ("ar-Arab-EG", "ar-EG"),
+            ("ar-Arab-SA", "ar"),
+            ("fr_MA.UTF-8", "fr-MA"),
+            ("fr-SN-x-test", "fr-SN"),
+            ("fr_CA.UTF-8", "fr"),
+            ("af", "af-ZA"),
+            ("am_ET.UTF-8", "am-ET"),
+            ("ha", "ha-NG"),
+            ("ig", "ig-NG"),
+            ("mg", "mg-MG"),
+            ("rw", "rw-RW"),
+            ("so", "so-SO"),
+            ("sw_KE.UTF-8", "sw-KE"),
+            ("xh", "xh-ZA"),
+            ("yo", "yo-NG"),
+            ("zu", "zu-ZA"),
+            ("bn_BD.UTF-8", "bn"),
+            ("fa_IR", "fa"),
+            ("iw", "he"),
+            ("mr_IN", "mr"),
+            ("ta_IN", "ta"),
+            ("te_IN", "te"),
+            ("th_TH", "th"),
+            ("ur_PK", "ur"),
+            ("ms_MY.UTF-8", "ms"),
+            ("tl_PH.UTF-8", "fil"),
             ("xx_YY", "en"),
         )
         for raw, expected in cases:
