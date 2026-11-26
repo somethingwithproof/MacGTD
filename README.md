@@ -181,6 +181,15 @@ Pull requests and pushes to `main` run validation followed by native E2E. The E2
 
 Earlier macOS versions are not validated by current CI. Live provider runs require dedicated secrets and have not yet been verified. Shortcuts/Siri and licensed desktop apps are outside the default hosted suite. Native action tests exercise packaged Alfred scripts directly; they do not establish full Alfred UI compatibility. See [test setup, prerequisites, and coverage](tests/e2e/README.md).
 
+## Localization
+
+User-facing CLI, test runner, and menu bar strings ship in 20 locales (`en`, `de`, `es`, `fr`, `it`, `pt-BR`, `nl`, `ru`, `uk`, `ja`, `ko`, `zh-CN`, `zh-TW`, `ar`, `hi`, `pl`, `tr`, `sv`, `vi`, `id`) under `locales/` via `scripts/i18n.py` with zero third-party dependencies. Locale resolution checks `--lang`, then `LC_ALL`, `LC_MESSAGES`, and `LANG`, falling back to `en`.
+
+```bash
+python3 scripts/i18n.py --lang de menubar.quick_capture
+LANG=ja_JP.UTF-8 workflows/menubar/gtd-menubar.sh
+```
+
 ## Development
 
 Install [mise](https://mise.jdx.dev/) and use the Python version pinned in `.mise.toml`:

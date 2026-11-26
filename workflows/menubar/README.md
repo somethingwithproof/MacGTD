@@ -16,7 +16,11 @@ A status bar plugin showing your GTD inbox count and providing quick access to c
    ln -s "$(pwd)/workflows/menubar/gtd-menubar.sh" ~/Library/Application\ Support/SwiftBar/Plugins/gtd-menubar.5m.sh
    ```
 
-   The `5m` in the filename means it refreshes every 5 minutes.
+   The `5m` in the filename means it refreshes every 5 minutes. Symlinking keeps
+   automatic localization working because the script resolves its real path to
+   locate `scripts/i18n.py` and `locales/`. If you copy the script standalone
+   without keeping `scripts/i18n.py` and `locales/` two directories above it,
+   menu labels fall back to English.
 
 ### Using xbar
 
